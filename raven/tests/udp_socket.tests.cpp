@@ -10,10 +10,13 @@ TEST_CASE("UDP socket tests") {
     REQUIRE(nullptr != raven::udp_output_socket::create("0.0.0.0", 69));
   }
 
-  SECTION("send...") {
-    SECTION("returns 0 when sending some valid data") {
-      auto data = std::stringstream{"ahoy-hoy!"};
-      REQUIRE(0 == raven::udp_output_socket::create("0.0.0.0", 69)->send(data));
+  GIVEN("some small data") {
+    auto data = std::stringstream{"ahoy-hoy!"};
+
+    WHEN("I send the data") {
+      const auto result = raven::udp_output_socket::create("0.0.0.0", 69)->send(data);
+      
+      THEN("the result is a success") REQUIRE(0 == result);
     }
   }
 }
