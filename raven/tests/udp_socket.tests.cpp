@@ -13,9 +13,10 @@
 TEST_CASE("UDP socket tests") {
 
   auto io = boost::asio::io_context{};
+  const auto test_port = std::uint16_t{40000};
 
   SECTION("udp_output_socket::create creates an input socket") {
-    REQUIRE(nullptr != raven::udp_output_socket::create(io, "localhost", 1337));
+    REQUIRE(nullptr != raven::udp_output_socket::create(io, "localhost", test_port));
   }
 
   GIVEN("some small data") {
@@ -27,10 +28,10 @@ TEST_CASE("UDP socket tests") {
     };
 
     WHEN("I send and receive the data") {
-      auto input_socket = raven::udp_input_socket::create(io, 1337, buffer, std::move(process_data));
+      auto input_socket = raven::udp_input_socket::create(io, test_port, buffer, std::move(process_data));
       auto _ = std::async([&io]() { io.run(); });
 
-      std::ignore = raven::udp_output_socket::create(io, "localhost", 1337)->send(data);
+      std::ignore = raven::udp_output_socket::create(io, "localhost", test_port)->send(data);
 
       THEN("The received data is the same as the data that I sent") REQUIRE(data.str() == received_data);
 
