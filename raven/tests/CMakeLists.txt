@@ -18,6 +18,12 @@ add_executable(ravenTest
   "udp_socket.tests.cpp"
 )
 
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+# Find Boost libraries
+find_package(Boost 1.81.0)
+
 set_property(TARGET ravenTest PROPERTY CXX_STANDARD 20)
 
 target_compile_options(ravenTest PRIVATE

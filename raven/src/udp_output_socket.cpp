@@ -1,51 +1,53 @@
 #include "udp_output_socket.hpp"
 
-#include <winsock2.h>
-#include <Ws2tcpip.h>
+#include "framework.h"
 
+#include <boost/array.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/io_context.hpp>
+
+#include <algorithm>
 #include <format>
 #include <stdexcept>
 #include <vector>
-#include <algorithm>
+
+using boost::asio::ip::udp;
 
 namespace raven {
 
 namespace detail {
 
-  class windows_udp_output_socket : public udp_output_socket {
+  class udp_output_socket_impl : public udp_output_socket {
    public:
-    explicit windows_udp_output_socket(std::string ip, std::uint16_t port) {
-      _socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-      if (_socket == INVALID_SOCKET) {
-        throw std::runtime_error{std::format("output socket failed: {}", WSAGetLastError())};
-      }
-
-      _dest_addr.sin_family      = AF_INET;
-      _dest_addr.sin_port        = htons(port);
-      InetPton(AF_INET, ip.c_str(), &_dest_addr.sin_addr.s_addr);
+    explicit udp_output_socket_impl(boost::asio::io_context& io, std::string host, std::uint16_t port)
+        : _io{io}, _socket{_io, udp::endpoint(udp::v4(), 0)}, _endpoint{} {
+      _endpoint = _resolve_endpoint(_io, std::move(host), port);
     }
 
-    ~windows_udp_output_socket() { ::closesocket(_socket); }
+    ~udp_output_socket_impl() { _socket.close(); }
 
-    [[nodiscard]] int send(std::istream& data) override {
-      auto bytes = std::vector<char>{};
-      std::copy(std::istreambuf_iterator<char>{data}, {}, std::back_inserter(bytes));
-
-      const auto result =
-          ::sendto(_socket, bytes.data(), static_cast<int>(bytes.size()), 0, reinterpret_cast<sockaddr*>(& _dest_addr), sizeof(_dest_addr));
-
-      return result;
+    [[nodiscard]] size_t send(std::istream& data) override { 
+      auto buf = std::array<char, 1024>{};
+      const auto end = std::copy(std::istreambuf_iterator<char>(data), {}, buf.begin());
+      return _socket.send_to(boost::asio::buffer(buf, std::distance(buf.begin(), end)), _endpoint);
     }
 
    private:
-    SOCKET _socket{};
-    sockaddr_in _dest_addr{};
+    [[nodiscard]] static udp::endpoint _resolve_endpoint(boost::asio::io_context& io, std::string host, std::uint16_t port) {
+      udp::resolver resolver(io);
+      udp::resolver::query query(udp::v4(), host, std::to_string(static_cast<std::uint32_t>(port)));
+      return *resolver.resolve(query);
+    }
+
+    boost::asio::io_context& _io;
+    udp::socket _socket;
+    udp::endpoint _endpoint;
   };
 
 }  // namespace detail
 
-udp_output_socket::ptr udp_output_socket::create(std::string ip, std::uint16_t port) {
-  return std::make_unique<detail::windows_udp_output_socket>(std::move(ip), port);
+udp_output_socket::ptr udp_output_socket::create(boost::asio::io_context& io, std::string ip, std::uint16_t port) {
+  return std::make_unique<detail::udp_output_socket_impl>(io, std::move(ip), port);
 }
 
 }  // namespace raven

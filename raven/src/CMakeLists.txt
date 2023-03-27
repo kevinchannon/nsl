@@ -4,7 +4,13 @@ cmake_minimum_required(VERSION 3.15)
 add_library(libRavenClient
   "udp_output_socket.cpp"
 	"udp_input_socket.cpp"
-)
+ "targetver.h")
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+# Find Boost libraries
+find_package(Boost 1.81.0)
 
 set_property(TARGET libRavenClient PROPERTY CXX_STANDARD 20)
 

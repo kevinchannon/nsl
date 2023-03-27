@@ -1,60 +1,65 @@
 #include "udp_input_socket.hpp"
 
-#include <Ws2tcpip.h>
-#include <winsock2.h>
+#include <boost/asio.hpp>
+#include "framework.h"
 
 #include <format>
+#include <span>
 #include <stdexcept>
+
+using boost::asio::ip::udp;
 
 namespace raven {
 
 namespace detail {
 
-  class windows_udp_input_socket : public udp_input_socket {
+  class udp_input_socket_impl : public udp_input_socket {
    public:
-    explicit windows_udp_input_socket(std::uint16_t port) {
-      _socket = ::socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-      if (_socket == INVALID_SOCKET) {
-        throw std::runtime_error{std::format("input socket failed: {}", WSAGetLastError())};
-      }
-
-      auto recv_address            = sockaddr_in{};
-      recv_address.sin_family      = AF_INET;
-      recv_address.sin_port        = htons(port);
-      recv_address.sin_addr.s_addr = INADDR_ANY;
-
-      const auto result = ::bind(_socket, reinterpret_cast<sockaddr*>(&recv_address), sizeof(recv_address));
-      if (SOCKET_ERROR == result) {
-        throw std::runtime_error{std::format("input socket failed to bind: {}", WSAGetLastError())};
-      }
+    explicit udp_input_socket_impl(boost::asio::io_context& io,
+                                   std::uint16_t port,
+                                   std::span<char> buffer,
+                                   callback_t handle_data)
+        : _socket(io, udp::endpoint(udp::v4(), port))
+        , _endpoint{_resolve_endpoint(io, "127.0.0.1", port)}
+        , _buffer{std::move(buffer)}
+        , _handle_data{std::move(handle_data)} {
+      _receive();
     }
 
-    ~windows_udp_input_socket() { ::closesocket(_socket);
-    }
+    void stop() override { _socket.close(); }
 
-    [[nodiscard]] int recv(std::ostream& data) override {
-      char recvBuf[1024];
-      int recvBufLen = 1024;
-      sockaddr_in senderAddr;
-      int senderAddrLen = sizeof(senderAddr);
-      const auto result           = ::recvfrom(_socket, recvBuf, recvBufLen, 0, (sockaddr*)&senderAddr, &senderAddrLen);
-      if (SOCKET_ERROR == result) {
-        throw std::runtime_error{std::format("input socket failed to receive: {}", WSAGetLastError())};
-      }
-
-      std::copy_n(recvBuf, recvBufLen, std::ostreambuf_iterator<char>{data});
-
-      return result;
-    }
+    ~udp_input_socket_impl() { stop(); }
 
    private:
-    SOCKET _socket{};
+    [[nodiscard]] static udp::endpoint _resolve_endpoint(boost::asio::io_context& io, std::string host, std::uint16_t port) {
+      udp::resolver resolver(io);
+      udp::resolver::query query(udp::v4(), host, std::to_string(static_cast<std::uint32_t>(port)));
+      return *resolver.resolve(query);
+    }
+
+    void _receive() {
+      std::ranges::fill(_buffer, '\0');
+      _socket.async_receive_from(boost::asio::buffer(_buffer), _endpoint, [this](auto&& err, auto&& bytes_received) {
+        if (!err) {
+          _handle_data(bytes_received);
+          _receive();
+        }
+      });
+    }
+
+    udp::socket _socket;
+    udp::endpoint _endpoint{};
+    std::span<char> _buffer;
+    callback_t _handle_data;
   };
 
 }  // namespace detail
 
-udp_input_socket::ptr udp_input_socket::create(std::uint16_t port) {
-  return std::make_unique<detail::windows_udp_input_socket>(port);
+udp_input_socket::ptr udp_input_socket::create(boost::asio::io_context& io,
+                                               std::uint16_t port,
+                                               std::span<char> buffer,
+                                               callback_t handle_data) {
+  return std::make_unique<detail::udp_input_socket_impl>(io, port, std::move(buffer), std::move(handle_data));
 }
 
 }  // namespace raven
