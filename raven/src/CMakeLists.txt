@@ -2,9 +2,9 @@
 cmake_minimum_required(VERSION 3.15)
 
 add_library(libRavenClient
-  "udp_output_socket.cpp"
-	"udp_input_socket.cpp"
- "targetver.h")
+  "udp_emitter.cpp"
+	"udp_receiver.cpp"
+)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()

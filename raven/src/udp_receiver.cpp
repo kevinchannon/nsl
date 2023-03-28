@@ -1,4 +1,4 @@
-#include "udp_input_socket.hpp"
+#include "udp_receiver.hpp"
 
 #include "framework.h"
 #include <boost/asio.hpp>
@@ -7,19 +7,19 @@
 #include <span>
 #include <stdexcept>
 
-using boost::asio::ip::udp;
+namespace bai = boost::asio::ip;
 
-namespace raven {
+namespace raven::udp {
 
 namespace detail {
 
-  class udp_input_socket_impl : public udp_input_socket {
+  class receiver_impl : public receiver {
    public:
-    explicit udp_input_socket_impl(boost::asio::io_context& io,
+    explicit receiver_impl(boost::asio::io_context& io,
                                    std::uint16_t port,
                                    std::span<char> buffer,
                                    callback_t handle_data)
-        : _socket(io, udp::endpoint(udp::v4(), port))
+        : _socket(io, bai::udp::endpoint{bai::udp::v4(), port})
         , _endpoint{_resolve_endpoint(io, "127.0.0.1", port)}
         , _buffer{std::move(buffer)}
         , _handle_data{std::move(handle_data)} {
@@ -28,12 +28,12 @@ namespace detail {
 
     void stop() override { _socket.close(); }
 
-    ~udp_input_socket_impl() { stop(); }
+    ~receiver_impl() { stop(); }
 
    private:
-    [[nodiscard]] static udp::endpoint _resolve_endpoint(boost::asio::io_context& io, std::string host, std::uint16_t port) {
-      udp::resolver resolver(io);
-      udp::resolver::query query(udp::v4(), host, std::to_string(static_cast<std::uint32_t>(port)));
+    [[nodiscard]] static bai::udp::endpoint _resolve_endpoint(boost::asio::io_context& io, std::string host, std::uint16_t port) {
+      bai::udp::resolver resolver(io);
+      bai::udp::resolver::query query(bai::udp::v4(), host, std::to_string(static_cast<std::uint32_t>(port)));
       return *resolver.resolve(query);
     }
 
@@ -55,19 +55,19 @@ namespace detail {
       });
     }
 
-    udp::socket _socket;
-    udp::endpoint _endpoint{};
+    bai::udp::socket _socket;
+    bai::udp::endpoint _endpoint{};
     std::span<char> _buffer;
     callback_t _handle_data;
   };
 
 }  // namespace detail
 
-udp_input_socket::ptr udp_input_socket::create(boost::asio::io_context& io,
+std::unique_ptr<receiver> receiver::create(boost::asio::io_context& io,
                                                std::uint16_t port,
                                                std::span<char> buffer,
                                                callback_t handle_data) {
-  return std::make_unique<detail::udp_input_socket_impl>(io, port, std::move(buffer), std::move(handle_data));
+  return std::make_unique<detail::receiver_impl>(io, port, std::move(buffer), std::move(handle_data));
 }
 
 }  // namespace raven

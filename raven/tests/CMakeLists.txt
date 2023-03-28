@@ -15,7 +15,7 @@ enable_testing()
 
 add_executable(ravenTest
   "main.cpp"
-  "udp_socket.tests.cpp"
+  "udp_comms.tests.cpp"
 )
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)

@@ -1,7 +1,7 @@
 #include "framework.h"
 
-#include "udp_input_socket.hpp"
-#include "udp_output_socket.hpp"
+#include "udp_emitter.hpp"
+#include "udp_receiver.hpp"
 
 #include "io_runner.hpp"
 #include "waiting.hpp"
@@ -25,10 +25,10 @@ TEST_CASE("UDP socket tests") {
   const auto test_port = std::uint16_t{40000};
 
   SECTION("udp_output_socket::create creates an input socket") {
-    REQUIRE(nullptr != raven::udp_output_socket::create(io, "localhost", test_port));
+    REQUIRE(nullptr != raven::udp::emitter::create(io, "localhost", test_port));
   }
 
-  auto buffer        = std::vector<char>{};
+  auto buffer = std::vector<char>{};
 
   auto received_data = std::string{};
   auto mtx           = std::mutex{};
@@ -42,10 +42,10 @@ TEST_CASE("UDP socket tests") {
 
     WHEN("I send and receive the data") {
       buffer.resize(128);
-      auto input_socket = raven::udp_input_socket::create(io, test_port, buffer, std::move(process_data));
+      auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore = raven::udp_output_socket::create(io, "localhost", test_port)->send(data);
+      std::ignore = raven::udp::emitter::create(io, "localhost", test_port)->send(data);
 
       THEN("The received data is the same as the data that I sent") REQUIRE(data.str() == received_data);
     }
@@ -63,10 +63,10 @@ TEST_CASE("UDP socket tests") {
 
     WHEN("I send and receive the data") {
       buffer.resize(1024);
-      auto input_socket = raven::udp_input_socket::create(io, test_port, buffer, std::move(process_data));
+      auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore                  = raven::udp_output_socket::create(io, "localhost", test_port)->send(data);
+      std::ignore                  = raven::udp::emitter::create(io, "localhost", test_port)->send(data);
       const auto all_data_received = [&]() {
         auto lock = std::lock_guard<std::mutex>{mtx};
         return received_data.size() == data_size;
@@ -74,8 +74,9 @@ TEST_CASE("UDP socket tests") {
 
       REQUIRE(test::wait_for(all_data_received, 10ms));
 
-      THEN("The received data is the same as the data that I sent")
-      REQUIRE(data.str() == received_data);
+      THEN("The received data is the same as the data that I sent") {
+        REQUIRE(data.str() == received_data);
+      }
     }
   }
 }

@@ -9,14 +9,12 @@ namespace boost::asio {
 class io_context;
 }
 
-namespace raven {
+namespace raven::udp {
 
-struct udp_output_socket {
-  using ptr = std::unique_ptr<udp_output_socket>;
+struct emitter {
+  static std::unique_ptr<emitter> create(boost::asio::io_context& io, std::string ip, std::uint16_t port);
 
-  static ptr create(boost::asio::io_context& io, std::string ip, std::uint16_t port);
-
-  virtual ~udp_output_socket() = default;
+  virtual ~emitter() = default;
 
   [[nodiscard]] virtual size_t send(std::istream& data) = 0;
 };
