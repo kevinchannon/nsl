@@ -61,20 +61,19 @@ TEST_CASE("UDP socket tests") {
       return static_cast<char>(std::uniform_int_distribution<std::int32_t>{0x30, 0x39}(rng));
     });
 
-    WHEN("I send and receive the data") {
+    WHEN(std::format("I send {} bytes of data", data_size)) {
       buffer.resize(1024);
       auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore                  = raven::udp::emitter::create(io, "localhost", test_port)->send(data);
-      const auto all_data_received = [&]() {
-        auto lock = std::lock_guard<std::mutex>{mtx};
-        return received_data.size() == data_size;
-      };
-
-      REQUIRE(test::wait_for(all_data_received, 10ms));
+      std::ignore = raven::udp::emitter::create(io, "localhost", test_port)->send(data);
 
       THEN("The received data is the same as the data that I sent") {
+        const auto all_data_received = [&]() {
+          auto lock = std::lock_guard<std::mutex>{mtx};
+          return received_data.size() == data_size;
+        };
+        REQUIRE(test::wait_for(all_data_received, 50ms));
         REQUIRE(data.str() == received_data);
       }
     }

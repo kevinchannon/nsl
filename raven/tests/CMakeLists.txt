@@ -48,3 +48,5 @@ include(CTest)
 include(Catch)
 
 catch_discover_tests(ravenTest)
+
+add_test(NAME ravenTest COMMAND ravenTest)
