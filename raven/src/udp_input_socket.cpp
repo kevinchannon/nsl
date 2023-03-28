@@ -40,10 +40,18 @@ namespace detail {
     void _receive() {
       std::ranges::fill(_buffer, '\0');
       _socket.async_receive_from(boost::asio::buffer(_buffer), _endpoint, [this](auto&& err, auto&& bytes_received) {
-        if (!err) {
-          _handle_data(bytes_received);
-          _receive();
+        if (err) {
+          return;
         }
+
+        auto remaining_bytes = bytes_received;
+        while (remaining_bytes > 0) {
+          const auto number_of_bytes_to_handle_in_this_iteration = std::min(remaining_bytes, _buffer.size());
+          _handle_data(number_of_bytes_to_handle_in_this_iteration);
+          remaining_bytes = std::max(0ull, remaining_bytes - number_of_bytes_to_handle_in_this_iteration);
+        }
+
+        _receive();
       });
     }
 

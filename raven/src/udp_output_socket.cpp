@@ -28,8 +28,18 @@ namespace detail {
 
     [[nodiscard]] size_t send(std::istream& data) override { 
       auto buf = std::array<char, 1024>{};
-      const auto end = std::copy(std::istreambuf_iterator<char>(data), {}, buf.begin());
-      return _socket.send_to(boost::asio::buffer(buf, std::distance(buf.begin(), end)), _endpoint);
+      auto sent_byte_count = size_t{0};
+      do {
+        data.read(buf.data(), static_cast<std::streamsize>(buf.size()));
+        const auto read_bytes = data.gcount();
+        if (read_bytes <= 0) {
+          break;
+        }
+
+        sent_byte_count += _socket.send_to(boost::asio::buffer(buf, data.gcount()), _endpoint);
+      } while (true);
+
+      return sent_byte_count;
     }
 
    private:
