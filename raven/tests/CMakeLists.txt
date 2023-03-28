@@ -14,7 +14,6 @@ FetchContent_MakeAvailable(Catch2)
 enable_testing()
 
 add_executable(ravenTest
-  "main.cpp"
   "udp_comms.tests.cpp"
 )
 
@@ -39,8 +38,7 @@ target_include_directories(ravenTest PRIVATE
 target_link_libraries(ravenTest
   PRIVATE
     libRavenClient
-    Catch2::Catch2
-    ws2_32
+    Catch2::Catch2WithMain
 )
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
