@@ -4,15 +4,21 @@
 #include "udp_output_socket.hpp"
 
 #include "io_runner.hpp"
+#include "waiting.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <boost/asio.hpp>
 
-#include <vector>
+#include <chrono>
 #include <future>
 #include <random>
 #include <sstream>
+#include <thread>
+#include <vector>
+
+using namespace std::chrono_literals;
 
 TEST_CASE("UDP socket tests") {
   auto io              = boost::asio::io_context{};
@@ -23,8 +29,11 @@ TEST_CASE("UDP socket tests") {
   }
 
   auto buffer        = std::vector<char>{};
+
   auto received_data = std::string{};
-  auto process_data  = [&received_data, &buffer](auto byte_count) {
+  auto mtx           = std::mutex{};
+  auto process_data  = [&](auto byte_count) {
+    auto lock = std::lock_guard<std::mutex>{mtx};
     std::copy_n(buffer.begin(), byte_count, std::back_inserter(received_data));
   };
 
@@ -42,11 +51,14 @@ TEST_CASE("UDP socket tests") {
     }
   }
 
-  GIVEN("Some data larger than the send buffer size") {
+  GIVEN("Some data around the send buffer size") {
     auto data = std::stringstream{};
     auto rng  = std::mt19937_64{934853};  // arbitrary seed.
-    std::generate_n(std::ostreambuf_iterator<char>{data}, 1025, [&rng]() {
-      return static_cast<char>(std::uniform_int_distribution<std::int32_t>{30, 39}(rng));
+
+    const auto data_size = GENERATE(1022, 1023, 1024, 1025, 1026);
+
+    std::generate_n(std::ostreambuf_iterator<char>{data}, data_size, [&rng]() {
+      return static_cast<char>(std::uniform_int_distribution<std::int32_t>{0x30, 0x39}(rng));
     });
 
     WHEN("I send and receive the data") {
@@ -54,10 +66,16 @@ TEST_CASE("UDP socket tests") {
       auto input_socket = raven::udp_input_socket::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore = raven::udp_output_socket::create(io, "localhost", test_port)->send(data);
+      std::ignore                  = raven::udp_output_socket::create(io, "localhost", test_port)->send(data);
+      const auto all_data_received = [&]() {
+        auto lock = std::lock_guard<std::mutex>{mtx};
+        return received_data.size() == data_size;
+      };
+
+      REQUIRE(test::wait_for(all_data_received, 10ms));
 
       THEN("The received data is the same as the data that I sent")
-        REQUIRE(data.str() == received_data);
+      REQUIRE(data.str() == received_data);
     }
   }
 }
