@@ -17,6 +17,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include <string_view>
 
 using namespace std::chrono_literals;
 
@@ -25,7 +26,7 @@ TEST_CASE("UDP socket tests") {
   const auto test_port = std::uint16_t{40000};
 
   SECTION("udp_output_socket::create creates an input socket") {
-    REQUIRE(nullptr != raven::udp::emitter::create(io, "localhost", test_port));
+    REQUIRE(nullptr != raven::udp::emitter::create("localhost", test_port));
   }
 
   auto buffer = std::vector<char>{};
@@ -45,9 +46,16 @@ TEST_CASE("UDP socket tests") {
       auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore = raven::udp::emitter::create(io, "localhost", test_port)->send(data);
+      std::ignore = raven::udp::emitter::create("localhost", test_port)->send(data);
 
-      THEN("The received data is the same as the data that I sent") REQUIRE(data.str() == received_data);
+      THEN("The received data is the same as the data that I sent") {
+        const auto all_data_received = [&]() {
+          auto lock = std::lock_guard<std::mutex>{mtx};
+          return received_data.size() == std::string_view{"ahoy-hoy!"}.length();
+        };
+        REQUIRE(test::wait_for(all_data_received, 50ms));
+        REQUIRE(data.str() == received_data);
+      }
     }
   }
 
@@ -66,7 +74,7 @@ TEST_CASE("UDP socket tests") {
       auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore = raven::udp::emitter::create(io, "localhost", test_port)->send(data);
+      std::ignore = raven::udp::emitter::create("localhost", test_port)->send(data);
 
       THEN("The received data is the same as the data that I sent") {
         const auto all_data_received = [&]() {

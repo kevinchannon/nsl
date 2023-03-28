@@ -20,7 +20,7 @@ namespace detail {
                                    std::span<char> buffer,
                                    callback_t handle_data)
         : _socket(io, bai::udp::endpoint{bai::udp::v4(), port})
-        , _endpoint{_resolve_endpoint(io, "127.0.0.1", port)}
+        , _endpoint{_resolve_endpoint(io, "localhost", port)}
         , _buffer{std::move(buffer)}
         , _handle_data{std::move(handle_data)} {
       _receive();

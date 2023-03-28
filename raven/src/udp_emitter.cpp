@@ -19,24 +19,23 @@ namespace detail {
 
   class emitter_impl : public emitter {
    public:
-    explicit emitter_impl(boost::asio::io_context& io, std::string host, std::uint16_t port)
-        : _io{io}, _socket{_io, bai::udp::endpoint(bai::udp::v4(), 0)}, _endpoint{} {
+    explicit emitter_impl(std::string host, std::uint16_t port)
+        : _io{}, _socket{_io, bai::udp::endpoint(bai::udp::v4(), 0)}, _endpoint{} {
       _endpoint = _resolve_endpoint(_io, std::move(host), port);
     }
 
     ~emitter_impl() { _socket.close(); }
 
     [[nodiscard]] size_t send(std::istream& data) override { 
-      auto buf = std::array<char, 1024>{};
       auto sent_byte_count = size_t{0};
       do {
-        data.read(buf.data(), static_cast<std::streamsize>(buf.size()));
+        data.read(_send_buffer.data(), static_cast<std::streamsize>(_send_buffer.size()));
         const auto read_bytes = data.gcount();
         if (read_bytes <= 0) {
           break;
         }
 
-        sent_byte_count += _socket.send_to(boost::asio::buffer(buf, data.gcount()), _endpoint);
+        sent_byte_count += _socket.send_to(boost::asio::buffer(_send_buffer, data.gcount()), _endpoint);
       } while (true);
 
       return sent_byte_count;
@@ -49,15 +48,16 @@ namespace detail {
       return *resolver.resolve(query);
     }
 
-    boost::asio::io_context& _io;
+    boost::asio::io_context _io;
     bai::udp::socket _socket;
     bai::udp::endpoint _endpoint;
+    std::array<char, 1024> _send_buffer;
   };
 
 }  // namespace detail
 
-std::unique_ptr<emitter> emitter::create(boost::asio::io_context& io, std::string ip, std::uint16_t port) {
-  return std::make_unique<detail::emitter_impl>(io, std::move(ip), port);
+std::unique_ptr<emitter> emitter::create(std::string ip, std::uint16_t port) {
+  return std::make_unique<detail::emitter_impl>(std::move(ip), port);
 }
 
-}  // namespace raven
+}  // namespace ravent
