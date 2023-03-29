@@ -8,8 +8,8 @@
 namespace raven::tftp {
 
 using byte = char;
-using packet = std::array<byte, 516>;
+using packet_bytes = std::array<byte, 516>;
 
-[[nodiscard]] packet make_write_request(std::string_view filename);
+[[nodiscard]] packet_bytes make_write_request_bytes(std::string_view filename);
 
 }  // namespace raven::tftp

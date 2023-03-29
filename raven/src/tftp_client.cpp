@@ -8,11 +8,11 @@ using namespace std::string_view_literals;
 
 namespace raven::tftp {
 
-packet make_write_request(std::string_view filename) {
-  auto out = packet{};
+packet_bytes make_write_request_bytes(std::string_view filename) {
+  auto pkt = packet_bytes{};
 
-  wite::io::write(out, wite::io::big_endian{std::uint16_t{2}}, filename, '\0', "octet"sv, '\0');
+  wite::io::write(pkt, wite::io::big_endian{std::uint16_t{2}}, filename, '\0', "octet"sv, '\0');
 
-  return out;
+  return pkt;
 }
 }  // namespace raven::tftp
