@@ -32,7 +32,7 @@ TEST_CASE("UDP socket tests") {
 
   auto buffer = std::vector<char>{};
 
-  auto received_data = std::vector<char>{};
+  auto received_data = std::string{};
   auto mtx           = std::mutex{};
   auto process_data  = [&](auto byte_count) {
     auto lock = std::lock_guard<std::mutex>{mtx};
@@ -55,7 +55,7 @@ TEST_CASE("UDP socket tests") {
           return received_data.size() == std::string_view{"ahoy-hoy!"}.length();
         };
         REQUIRE(test::wait_for(all_data_received, 50ms));
-        //REQUIRE(data.str() == received_data);
+        REQUIRE(data.str() == received_data);
       }
     }
   }
@@ -83,7 +83,7 @@ TEST_CASE("UDP socket tests") {
           return received_data.size() == data_size;
         };
         REQUIRE(test::wait_for(all_data_received, 50ms));
-        //REQUIRE(data.str() == received_data);
+        REQUIRE(data.str() == received_data);
       }
     }
   }
@@ -109,7 +109,7 @@ TEST_CASE("UDP socket tests") {
           return received_data.size() == data_size;
         };
         REQUIRE(test::wait_for(all_data_received, 1s));
-        //REQUIRE(data.str() == received_data);
+        REQUIRE(data.str() == received_data);
       }
     }
   }
