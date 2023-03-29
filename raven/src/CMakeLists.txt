@@ -14,7 +14,7 @@ FetchContent_MakeAvailable(wite)
 add_library(libRavenClient
   "udp_emitter.cpp"
 	"udp_receiver.cpp"
- "tftp_sender.cpp")
+  "tftp_client.cpp")
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -32,9 +32,4 @@ target_compile_options(libRavenClient PRIVATE
 target_include_directories(libRavenClient PUBLIC
 	${CMAKE_SOURCE_DIR}
   ${wite_SOURCE_DIR}
-)
-
-target_link_libraries(libRavenClient
-	PRIVATE
-		ws2_32
 )
