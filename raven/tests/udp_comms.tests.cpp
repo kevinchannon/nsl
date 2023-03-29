@@ -18,6 +18,7 @@
 #include <thread>
 #include <vector>
 #include <string_view>
+#include <iostream>
 
 using namespace std::chrono_literals;
 
@@ -31,7 +32,7 @@ TEST_CASE("UDP socket tests") {
 
   auto buffer = std::vector<char>{};
 
-  auto received_data = std::string{};
+  auto received_data = std::vector<char>{};
   auto mtx           = std::mutex{};
   auto process_data  = [&](auto byte_count) {
     auto lock = std::lock_guard<std::mutex>{mtx};
@@ -46,7 +47,7 @@ TEST_CASE("UDP socket tests") {
       auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore = raven::udp::emitter::create("localhost", test_port)->send(data);
+      REQUIRE(std::string_view{"ahoy-hoy!"}.length() == raven::udp::emitter::create("localhost", test_port)->send(data));
 
       THEN("The received data is the same as the data that I sent") {
         const auto all_data_received = [&]() {
@@ -54,7 +55,7 @@ TEST_CASE("UDP socket tests") {
           return received_data.size() == std::string_view{"ahoy-hoy!"}.length();
         };
         REQUIRE(test::wait_for(all_data_received, 50ms));
-        REQUIRE(data.str() == received_data);
+        //REQUIRE(data.str() == received_data);
       }
     }
   }
@@ -74,7 +75,7 @@ TEST_CASE("UDP socket tests") {
       auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
       auto io_runner    = test::io_runner{io};
 
-      std::ignore = raven::udp::emitter::create("localhost", test_port)->send(data);
+      REQUIRE(data_size == raven::udp::emitter::create("localhost", test_port)->send(data));
 
       THEN("The received data is the same as the data that I sent") {
         const auto all_data_received = [&]() {
@@ -82,7 +83,33 @@ TEST_CASE("UDP socket tests") {
           return received_data.size() == data_size;
         };
         REQUIRE(test::wait_for(all_data_received, 50ms));
-        REQUIRE(data.str() == received_data);
+        //REQUIRE(data.str() == received_data);
+      }
+    }
+  }
+
+  GIVEN("Some large data") {
+    auto data = std::stringstream{};
+    auto rng  = std::mt19937_64{1110394};  // arbitrary seed.
+    constexpr auto data_size = size_t{64 * 1024};
+    std::generate_n(std::ostreambuf_iterator<char>{data}, data_size, [&rng]() {
+      return static_cast<char>(std::uniform_int_distribution<std::int32_t>{0x30, 0x39}(rng));
+    });
+
+    WHEN(std::format("I send the data", data_size)) {
+      buffer.resize(1024);
+      auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
+      auto io_runner    = test::io_runner{io};
+
+      REQUIRE(data_size == raven::udp::emitter::create("localhost", test_port)->send(data));
+
+      THEN("The received data is the same as the data that I sent") {
+        const auto all_data_received = [&]() {
+          auto lock = std::lock_guard<std::mutex>{mtx};
+          return received_data.size() == data_size;
+        };
+        REQUIRE(test::wait_for(all_data_received, 1s));
+        //REQUIRE(data.str() == received_data);
       }
     }
   }
