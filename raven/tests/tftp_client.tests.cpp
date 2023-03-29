@@ -16,6 +16,10 @@ std::string_view get_write_request_filename(const raven::tftp::packet& pkt) {
   return {pkt.data() + 2, std::find(pkt.data() + 2, pkt.data() + pkt.size() - 2, '\0')};
 }
 
+std::string_view get_write_request_mode(const raven::tftp::packet& pkt, std::ptrdiff_t offset) {
+  return {pkt.data() + offset, std::find(pkt.data() + offset, pkt.data() + pkt.size() - offset, '\0')};
+}
+
 }  // namespace
 
 TEST_CASE("TFTP Sender tests") {
@@ -25,5 +29,10 @@ TEST_CASE("TFTP Sender tests") {
 
   SECTION("write request has the correct filename") {
     REQUIRE("foo" == std::string{get_write_request_filename(raven::tftp::make_write_request("foo"))});
+  }
+
+  SECTION("write request has 'octet' mode") {
+    constexpr auto mode_offset = 2 + 3 + 1; // op code size + "foo" + null character
+    REQUIRE("octet" == std::string{get_write_request_mode(raven::tftp::make_write_request("foo"), mode_offset)});
   }
 }
