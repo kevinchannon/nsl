@@ -11,10 +11,18 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
+FetchContent_Declare(
+  wite
+	GIT_REPOSITORY https://github.com/kevinchannon/wite.git
+  GIT_TAG v1.0.0
+)
+FetchContent_MakeAvailable(wite)
+
 enable_testing()
 
 add_executable(ravenTest
   "udp_comms.tests.cpp"
+ "tftp_sender.tests.cpp"
 )
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -33,6 +41,7 @@ target_compile_options(ravenTest PRIVATE
 target_include_directories(ravenTest PRIVATE
   "../src"
 	${CMAKE_SOURCE_DIR}
+  ${wite_SOURCE_DIR}
 )
 
 target_link_libraries(ravenTest
