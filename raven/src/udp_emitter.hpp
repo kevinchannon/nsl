@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <istream>
+#include <span>
 
 namespace boost::asio {
 class io_context;

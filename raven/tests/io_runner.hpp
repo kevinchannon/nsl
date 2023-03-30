@@ -5,7 +5,7 @@
 
 #include <future>
 
-namespace test {
+namespace raven::test {
 
 class io_runner {
  public:

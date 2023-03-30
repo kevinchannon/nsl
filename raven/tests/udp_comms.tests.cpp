@@ -23,6 +23,8 @@
 using namespace std::chrono_literals;
 
 TEST_CASE("UDP socket tests") {
+  using namespace raven;
+
   auto io              = boost::asio::io_context{};
   const auto test_port = std::uint16_t{40000};
 

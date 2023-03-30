@@ -3,16 +3,21 @@
 #include <wite/io.hpp>
 
 #include <string_view>
+#include <tuple>
 
 using namespace std::string_view_literals;
 
 namespace raven::tftp {
 
-packet_bytes make_write_request_bytes(std::string_view filename) {
-  auto pkt = packet_bytes{};
-
-  wite::io::write(pkt, wite::io::big_endian{std::uint16_t{2}}, filename, '\0', "octet"sv, '\0');
-
-  return pkt;
+void client::send(std::string_view filename, std::istream& ) {
+  auto write_req = _insert_write_request(std::stringstream{}, filename);
+  std::ignore = _udp_emitter->send(write_req);
 }
+
+std::stringstream client::_insert_write_request(std::stringstream&& stream, std::string_view filename) {
+
+  wite::io::write(stream, );
+  return std::move(stream);
+}
+
 }  // namespace raven::tftp
