@@ -39,7 +39,13 @@ TEST_CASE("TFTP Client tests") {
       auto data = std::stringstream{"some data"};
       tftp::client{std::move(udp_emitter)}.send("foo", data);
 
-      // REQUIRE(sent_data == "some data");
+      auto expected_write_req = std::stringstream{};
+      expected_write_req << tftp::write_request{"foo"};
+
+      auto expected_data = std::string{};
+      std::copy(std::istreambuf_iterator{expected_write_req}, {}, std::back_inserter(expected_data));
+
+      REQUIRE(expected_data == sent_data);
     }
   }
 }
