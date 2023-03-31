@@ -13,12 +13,12 @@
 
 #include <chrono>
 #include <future>
+#include <iostream>
 #include <random>
 #include <sstream>
+#include <string_view>
 #include <thread>
 #include <vector>
-#include <string_view>
-#include <iostream>
 
 using namespace std::chrono_literals;
 
@@ -91,8 +91,8 @@ TEST_CASE("UDP socket tests") {
   }
 
   GIVEN("Some large data") {
-    auto data = std::stringstream{};
-    auto rng  = std::mt19937_64{1110394};  // arbitrary seed.
+    auto data                = std::stringstream{};
+    auto rng                 = std::mt19937_64{1110394};  // arbitrary seed.
     constexpr auto data_size = size_t{64 * 1024};
     std::generate_n(std::ostreambuf_iterator<char>{data}, data_size, [&rng]() {
       return static_cast<char>(std::uniform_int_distribution<std::int32_t>{0x30, 0x39}(rng));
@@ -115,4 +115,35 @@ TEST_CASE("UDP socket tests") {
       }
     }
   }
+}
+
+TEST_CASE("UDP ostream") {
+  using namespace raven;
+
+  auto rng                 = std::mt19937_64{1110394};  // arbitrary seed.
+  auto io                  = boost::asio::io_context{};
+  const auto test_port     = std::uint16_t{40000};
+  constexpr auto data_size = size_t{512};
+
+  auto data = std::string(data_size, '\0');
+  std::generate_n(data.begin(), data.size(), [&rng]() {
+    return static_cast<char>(std::uniform_int_distribution<std::int32_t>{0x30, 0x39}(rng));
+  });
+
+  auto buffer = std::vector<char>{};
+
+  auto received_data = std::string{};
+  auto mtx           = std::mutex{};
+  auto process_data  = [&](auto byte_count) {
+    auto lock = std::lock_guard<std::mutex>{mtx};
+    std::copy_n(buffer.begin(), byte_count, std::back_inserter(received_data));
+  };
+
+  buffer.resize(1024);
+  auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
+  auto io_runner    = test::io_runner{io};
+
+  udp::ostream{"localhost", test_port} << data << std::endl;
+
+  REQUIRE(data == received_data);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <wite/io/byte_stream.hpp>
+#include <wite/io/concepts.hpp>
 
 #include <format>
 #include <ostream>
