@@ -20,9 +20,13 @@ class request_base {
 
 class write_request : public request_base {
  public:
-  explicit write_request(std::string_view filename) : request_base{2}, filename{_validated_filename(filename)} {}
+  enum class write_mode { octet, netascii };
+
+  explicit write_request(std::string_view filename)
+      : request_base{2}, filename{_validated_filename(filename)}, mode{write_mode::octet} {}
 
   const std::string filename;
+  const write_mode mode;
 
  private:
   [[nodiscard]] static std::string _validated_filename(std::string_view filename) {
