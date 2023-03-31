@@ -2,12 +2,16 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <sstream>
+#include <array>
+#include <algorithm>
+
 using namespace raven;
 
 TEST_CASE("Requests tests") {
   SECTION("write_request") {
     SECTION("has op code of 2") {
-      REQUIRE(2 == tftp::write_request{""}.op_code);
+      REQUIRE(tftp::write_request::request_type::write == tftp::write_request{""}.op_code);
     }
 
     SECTION("has the expected filename") {
@@ -21,6 +25,15 @@ TEST_CASE("Requests tests") {
 
     SECTION("has a mode of 'octet'") {
       REQUIRE(tftp::write_request::write_mode::octet == tftp::write_request{"foo"}.mode);
+    }
+
+    SECTION("can be written to std::ostream") {
+      auto str = std::stringstream{};
+
+      str << tftp::write_request{"name"};
+
+      auto bytes = "\x02\0name\0octet\0";
+      REQUIRE(std::equal(bytes, std::next(bytes, 13), std::istreambuf_iterator<char>{str}, {}));
     }
   }
 }
