@@ -14,9 +14,7 @@ void client::send(std::string_view filename, std::istream& ) {
   std::ignore = _udp_emitter->send(write_req);
 }
 
-std::stringstream client::_insert_write_request(std::stringstream&& stream, std::string_view filename) {
-
-  wite::io::write(stream, );
+std::stringstream client::_insert_write_request(std::stringstream&& stream, std::string_view) {
   return std::move(stream);
 }
 

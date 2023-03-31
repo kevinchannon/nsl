@@ -2,30 +2,34 @@
 
 #include <wite/io/byte_stream.hpp>
 
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <variant>
+
 namespace raven::tftp {
 
 using byte         = char;
 using packet_bytes = std::array<char, 516>;
 
-struct request_base {
-  std::uint16_t op_code{};
-
-  std::ostream& operator<<(std::ostream& os) const {
-    wite::io::write(os, wite::io::big_endian{op_code});
-    return os;
-  }
+class request_base {
+ public:
+  explicit request_base(std::uint16_t op_code) : op_code{op_code} {}
+  const std::uint16_t op_code{};
 };
 
-struct write_request : pulic request_base {
-  enum class write_mode { octet };
+class write_request : public request_base {
+ public:
+  explicit write_request(std::string_view filename) : request_base{2}, filename{_validated_filename(filename)} {}
 
-  std::string filename{};
-  write_mode mode{write_mode::octet};
+  const std::string filename;
 
-  [[nodiscard]] std::ostream& operator<<(std::ostream& os) const {
-    os << *reinterpret_cast<const request_base*>(this);
-    os << filename << '\0' << "octet" << '\0';
-    return os;
+ private:
+  [[nodiscard]] static std::string _validated_filename(std::string_view filename) {
+    if (filename.length() > 503)
+      throw std::invalid_argument{"filename exceeds 503 charaters"};
+
+    return std::string{filename};
   }
 };
 
@@ -33,8 +37,7 @@ class request : public std::variant<write_request> {
   using _base_t = std::variant<write_request>;
 
  public:
-  request(write_request wr) : _base_t{std : : move(wr)} {}
-
+  request(write_request wr) : _base_t{std::move(wr)} {}
 };
 
 }  // namespace raven::tftp

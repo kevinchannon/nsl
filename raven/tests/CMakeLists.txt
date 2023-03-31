@@ -23,7 +23,7 @@ enable_testing()
 add_executable(ravenTest
   "udp_comms.tests.cpp"
   "tftp_client.tests.cpp"
-)
+ "tftp_types.tests.cpp")
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
