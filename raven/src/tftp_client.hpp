@@ -16,14 +16,7 @@ namespace raven::tftp {
 
 class client {
  public:
-  explicit client(std::unique_ptr<udp::emitter> udp_emitter) : _udp_emitter{std::move(udp_emitter)} {}
-
-  void send(std::string_view filename, std::istream& data);
-
- private:
-  [[nodiscard]] static std::stringstream _insert_write_request(std::stringstream&& os, std::string_view filename);
-
-  std::unique_ptr<udp::emitter> _udp_emitter;
+  void connect(std::ostream& target, std::string_view filename);
 };
 
 }  // namespace raven::tftp

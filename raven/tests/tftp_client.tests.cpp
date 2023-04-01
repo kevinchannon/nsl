@@ -26,26 +26,22 @@ std::string_view get_write_request_mode(const raven::tftp::packet_bytes& pkt, st
 TEST_CASE("TFTP Client tests") {
   using namespace raven;
 
-  auto udp_emitter = std::make_unique<test::udp::emitter_mock>();
-
-  SECTION("send method") {
-    auto sent_data       = std::string{};
-    udp_emitter->send_fn = [&](std::istream& data) {
-      std::getline(data, sent_data);
-      return sent_data.size();
-    };
-
-    SECTION("first end sends a write request") {
-      auto data = std::stringstream{"some data"};
-      tftp::client{std::move(udp_emitter)}.send("foo", data);
-
+  SECTION("connect method") {
+    SECTION("sends a write request") {
       auto expected_write_req = std::stringstream{};
       expected_write_req << tftp::write_request{"foo"};
 
-      auto expected_data = std::string{};
+      auto expected_data = std::vector<char>{};
       std::copy(std::istreambuf_iterator{expected_write_req}, {}, std::back_inserter(expected_data));
 
-      REQUIRE(expected_data == sent_data);
+      auto target = std::stringstream{};
+      auto client = tftp::client{};
+      client.connect(target, "foo");
+
+      auto received_data = std::vector<char>{};
+      std::copy(std::istreambuf_iterator{target}, {}, std::back_inserter(received_data));
+
+      REQUIRE(expected_data == received_data);
     }
   }
 }
