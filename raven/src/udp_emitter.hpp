@@ -73,6 +73,14 @@ class sink {
 };
 
 using ostreambuf = boost::iostreams::stream_buffer<sink>;
-using ostream = boost::iostreams::stream<sink>;
+using ostream    = boost::iostreams::stream<sink>;
+
+struct flush_t {};
+constexpr auto flush = flush_t{};
+
+inline std::ostream& operator<<(std::ostream& os, const flush_t&) {
+  os.flush();
+  return os;
+}
 
 }  // namespace raven::udp
