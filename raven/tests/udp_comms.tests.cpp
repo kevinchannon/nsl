@@ -143,7 +143,16 @@ TEST_CASE("UDP ostream") {
   auto input_socket = raven::udp::receiver::create(io, test_port, buffer, std::move(process_data));
   auto io_runner    = test::io_runner{io};
 
-  udp::ostream{"localhost", test_port} << data << std::endl;
+  auto stream = udp::ostream{"localhost", test_port};
+  
+  stream << data;
+  std::flush(stream);
+
+  const auto all_data_received = [&]() {
+    auto lock = std::lock_guard<std::mutex>{mtx};
+    return received_data.size() == data_size;
+  };
+  REQUIRE(test::wait_for(all_data_received, 1s));
 
   REQUIRE(data == received_data);
 }
