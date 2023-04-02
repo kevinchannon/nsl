@@ -11,6 +11,8 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <thread>
+#include <chrono>
 
 namespace boost::asio {
 class io_context;
