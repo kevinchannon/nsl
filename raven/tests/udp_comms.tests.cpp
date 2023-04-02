@@ -147,7 +147,7 @@ TEST_CASE("UDP ostream") {
     };
 
     buffer.resize(4096);
-    auto input_socket = raven::udp::receiver::create(io, test_port, std::move(process_data), 25 * 1024 * 1024);
+    auto input_socket = raven::udp::receiver::create(io, test_port, std::move(process_data), static_cast<int>(data_size));
     auto io_runner    = test::io_runner{io};
 
     auto udp_stream = udp::ostream{"localhost", test_port};
