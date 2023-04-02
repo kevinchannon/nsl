@@ -2,12 +2,12 @@
 
 #include <cstdint>
 #include <functional>
+#include <istream>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <span>
 #include <string>
-#include <istream>
-#include <optional>
 
 namespace boost::asio {
 class io_context;
@@ -20,9 +20,12 @@ struct receiver {
 
   using callback_t = std::function<void(std::istream&, size_t)>;
 
-  static std::unique_ptr<receiver> create(boost::asio::io_context& io, std::uint16_t port, callback_t handle_data, std::optional<int> recv_buf_size=std::nullopt);
+  static std::unique_ptr<receiver> create(boost::asio::io_context& io,
+                                          std::uint16_t port,
+                                          callback_t handle_data,
+                                          std::optional<int> recv_buf_size = std::nullopt);
 
   virtual void stop() = 0;
 };
 
-}  // namespace raven
+}  // namespace raven::udp

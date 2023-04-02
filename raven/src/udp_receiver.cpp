@@ -4,9 +4,9 @@
 #include "framework.h"
 
 #include <format>
+#include <optional>
 #include <span>
 #include <stdexcept>
-#include <optional>
 
 namespace bai = boost::asio::ip;
 
@@ -16,7 +16,10 @@ namespace detail {
 
   class receiver_impl : public receiver {
    public:
-    explicit receiver_impl(boost::asio::io_context& io, std::uint16_t port, callback_t handle_data, std::optional<int>recv_buf_size)
+    explicit receiver_impl(boost::asio::io_context& io,
+                           std::uint16_t port,
+                           callback_t handle_data,
+                           std::optional<int> recv_buf_size)
         : _socket(io, bai::udp::endpoint{bai::udp::v4(), port})
         , _endpoint{_resolve_endpoint(io, "localhost", port)}
         , _handle_data{std::move(handle_data)} {

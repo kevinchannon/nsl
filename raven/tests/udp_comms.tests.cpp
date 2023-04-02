@@ -127,7 +127,7 @@ TEST_CASE("UDP ostream") {
                                   size_t{0x80000},
                                   size_t{0x100000},
                                   size_t{0x200000},
-                                  size_t{0x800000} );
+                                  size_t{0x800000});
 
   SECTION(std::format("sends and receives {} bytes of data", data_size)) {
     auto data = std::string(data_size, '\0');
