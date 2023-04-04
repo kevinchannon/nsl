@@ -1,5 +1,7 @@
 #pragma once
 
+#include "framework.h"
+
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/iostreams/device/array.hpp>
