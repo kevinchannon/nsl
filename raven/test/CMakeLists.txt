@@ -21,9 +21,8 @@ FetchContent_MakeAvailable(wite)
 enable_testing()
 
 add_executable(ravenTest
-  "udp_comms.tests.cpp"
-  "tftp_client.tests.cpp"
- "tftp_types.tests.cpp")
+  "../udp/ostream.tests.cpp"
+)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
@@ -39,14 +38,12 @@ target_compile_options(ravenTest PRIVATE
 )
 
 target_include_directories(ravenTest PRIVATE
-  "../src"
 	${CMAKE_SOURCE_DIR}
   ${wite_SOURCE_DIR}
 )
 
 target_link_libraries(ravenTest
   PRIVATE
-    libRavenClient
     Catch2::Catch2WithMain
 )
 

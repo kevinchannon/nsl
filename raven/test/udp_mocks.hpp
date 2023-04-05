@@ -1,6 +1,7 @@
 #pragma once
 
 #include "udp_emitter.hpp"
+#include "udp_receiver.hpp"
 
 #include <functional>
 
@@ -11,4 +12,11 @@ class emitter_mock : public ::raven::udp::emitter {
 
   std::function<size_t(std::istream&)> send_fn{};
 };
+
+class receiver_mock : public ::raven::udp::receiver {
+ public:
+  [[nodiscard]] ::raven::udp::port_number connected_port() const override { return 0; }
+  void stop() override {};
+};
+
 }  // namespace raven::test::udp

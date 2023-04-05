@@ -2,6 +2,8 @@
 
 #include "framework.h"
 
+#include "udp_types.hpp"
+
 #include <boost/asio.hpp>
 
 #include <cstdint>
@@ -15,36 +17,16 @@
 #include <stdexcept>
 #include <string>
 
-namespace boost::asio {
-class io_context;
-}
-
-namespace raven::udp {
-
-using port_number = std::uint16_t;
-
-constexpr auto any_port = port_number{0};
-
-struct receiver {
-  virtual ~receiver() = default;
+namespace raven::test::udp {
 
   using callback_t = std::function<void(std::istream&, size_t)>;
 
-  static std::unique_ptr<receiver> create(boost::asio::io_context& io,
-                                          port_number port,
-                                          callback_t handle_data,
-                                          std::optional<int> recv_buf_size = std::nullopt);
-
-  virtual void stop()                        = 0;
-  virtual port_number connected_port() const = 0;
-};
-
-class receiver_impl : public receiver {
+class receiver {
  public:
-  explicit receiver_impl(boost::asio::io_context& io,
-                         std::uint16_t port,
+  explicit receiver(boost::asio::io_context& io,
+                         ::raven::udp::port_number port,
                          callback_t handle_data,
-                         std::optional<int> recv_buf_size)
+                         std::optional<int> recv_buf_size = std::nullopt)
       : _socket(io, boost::asio::ip::udp::endpoint{boost::asio::ip::udp::v4(), port})
       , _endpoint{_resolve_endpoint(io, "localhost", port)}
       , _handle_data{std::move(handle_data)} {
@@ -54,11 +36,11 @@ class receiver_impl : public receiver {
     _receive();
   }
 
-  ~receiver_impl() { stop(); }
+  ~receiver() { stop(); }
 
-  void stop() override { _socket.close(); }
+  void stop() { _socket.close(); }
 
-  port_number connected_port() const override { return _endpoint.port(); }
+  ::raven::udp::port_number connected_port() const { return _endpoint.port(); }
 
  private:
   [[nodiscard]] static boost::asio::ip::udp::endpoint _resolve_endpoint(boost::asio::io_context& io,
@@ -93,5 +75,4 @@ class receiver_impl : public receiver {
   static constexpr auto _recv_buf_size = 8192;
   boost::asio::streambuf _recv_data;
 };
-
-}  // namespace raven::udp
+}  // namespace raven::test::udp
