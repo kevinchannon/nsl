@@ -1,6 +1,8 @@
 #include "framework.h"
 
 #include "udp/ostream.hpp"
+#include "udp/istream.hpp"
+#include "udp/tpyes.hpp"
 
 #include "test/io_runner.hpp"
 #include "test/waiting.hpp"
@@ -23,7 +25,7 @@
 
 using namespace std::chrono_literals;
 
-TEST_CASE("UDP ostream") {
+TEST_CASE("UDP ostream tests") {
   using namespace raven;
 
   auto rng             = std::mt19937_64{1110394};  // arbitrary seed.
@@ -76,5 +78,27 @@ TEST_CASE("UDP ostream") {
     }
 
     REQUIRE(data == received_data);
+  }
+}
+
+TEST_CASE("UDP istream tests") {
+  auto io = boost::asio::io_context{};
+  auto test_port = raven::udp::port_number{40000};
+
+  SECTION("blocking receive") {
+    SECTION("An int can be received")
+    auto received = std::uint32_t{0};
+
+    auto udp_stream = raven::udp::istream{std::ref{io}, test_port};
+
+    auto _ = std::async(std::launch::async, [&]() {
+      std::this_thread::sleep_for(100ms);
+      auto target = raven::udp::ostream{"localhost", test_port};
+      target << uint32_t{0xFEDCBA98} << raven::udp::flush;
+    });
+
+    udp_stream >> received;
+
+    REQUIRE(uint32_t{0xFEDCBA98} == received);
   }
 }
