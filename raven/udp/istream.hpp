@@ -27,23 +27,20 @@ namespace raven::udp {
 namespace detail {
   class source {
     struct kernel {
-      kernel(boost::asio::io_context& io, port_number port)
-          : io{io}, socket{io, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0)}, endpoint{} {
-        endpoint = sink::_resolve_endpoint(io, "localhost", port);
-      }
+      kernel(boost::asio::io_context& io, boost::asio::ip::udp::endpoint endpoint) : io{io}, socket{io, endpoint} {}
 
       ~kernel() { socket.close(); }
 
-      boost::asio::io_context io;
+      boost::asio::io_context& io;
       boost::asio::ip::udp::socket socket;
-      boost::asio::ip::udp::endpoint endpoint;
     };
 
    public:
     using char_type = char;
-    using category  = boost::iostreams::sink_tag;
+    using category  = boost::iostreams::source_tag;
 
-    explicit source(boost::asio::io_context& io, port_number port) : _kernel{std::make_shared<kernel>(io, port)} {}
+    explicit source(boost::asio::io_context& io, port_number port)
+        : _kernel{std::make_shared<kernel>(io, _resolve_endpoint(io, "0.0.0.0", port))} {}
 
     source()                         = delete;
     source(const source&)            = default;
@@ -53,12 +50,13 @@ namespace detail {
 
     ~source() {}
 
-    [[nodiscard]] std::streamsize read(const char* s, std::streamsize n) {
-      return _kernel->socket.receive_from(boost::asio::buffer(s, n), _kernel->endpoint);
+    [[nodiscard]] std::streamsize read(char* s, std::streamsize n) {
+      auto bytes_recvd = _kernel->socket.receive(boost::asio::buffer(s, n));
+
+      return bytes_recvd;
     }
 
    private:
-    friend struct kernel;
     [[nodiscard]] static boost::asio::ip::udp::endpoint _resolve_endpoint(boost::asio::io_context& io,
                                                                           std::string host,
                                                                           port_number port) {

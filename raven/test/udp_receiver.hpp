@@ -2,7 +2,7 @@
 
 #include "framework.h"
 
-#include "udp_types.hpp"
+#include "udp/types.hpp"
 
 #include <boost/asio.hpp>
 
