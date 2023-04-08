@@ -10,6 +10,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <boost/asio.hpp>
 
 #include <atomic>
@@ -24,6 +26,7 @@
 #include <vector>
 
 using namespace std::chrono_literals;
+using namespace nlohmann;
 
 std::pair<boost::asio::ip::udp::socket, boost::asio::ip::udp::endpoint> get_connected_socket(boost::asio::io_context& io, raven::udp::port_number port) {
   auto resolver = boost::asio::ip::udp::resolver{io};

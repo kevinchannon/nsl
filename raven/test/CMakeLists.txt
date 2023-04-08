@@ -23,6 +23,7 @@ enable_testing()
 add_executable(ravenTest
   "../udp/ostream.tests.cpp"
   "../udp/istream.tests.cpp"
+  "../udp/stream.tests.cpp"
 )
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
