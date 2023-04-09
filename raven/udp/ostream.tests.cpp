@@ -4,8 +4,6 @@
 #include "udp/istream.hpp"
 #include "udp/types.hpp"
 
-#include "test/io_runner.hpp"
-#include "test/waiting.hpp"
 #include "test/udp_receiver.hpp"
 
 #include <catch2/catch_test_macros.hpp>

@@ -3,9 +3,7 @@
 #include "udp/istream.hpp"
 #include "udp/types.hpp"
 
-#include "test/io_runner.hpp"
 #include "test/udp_receiver.hpp"
-#include "test/waiting.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -28,7 +26,8 @@
 using namespace std::chrono_literals;
 using namespace nlohmann;
 
-std::pair<boost::asio::ip::udp::socket, boost::asio::ip::udp::endpoint> get_connected_socket(boost::asio::io_context& io, raven::udp::port_number port) {
+std::pair<boost::asio::ip::udp::socket, boost::asio::ip::udp::endpoint> get_connected_socket(boost::asio::io_context& io,
+                                                                                             raven::udp::port_number port) {
   auto resolver = boost::asio::ip::udp::resolver{io};
   auto query    = boost::asio::ip::udp::resolver::query{
       boost::asio::ip::udp::v4(), "localhost", std::to_string(static_cast<std::uint32_t>(port))};
@@ -46,7 +45,7 @@ TEST_CASE("UDP istream tests") {
 
   SECTION("blocking receive") {
     SECTION("An int can be received via unformatted read") {
-      auto udp_in   = raven::udp::istream{io, test_port};
+      auto udp_in = raven::udp::istream{io, test_port};
 
       auto received = std::async([&]() {
         auto recv_buf = uint32_t{0};
@@ -55,9 +54,9 @@ TEST_CASE("UDP istream tests") {
       });
 
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
-      
+
       auto send_data = std::uint32_t{0xFEDCBA98};
-      udp_out.send_to(boost::asio::buffer(reinterpret_cast<char*>(& send_data), sizeof(send_data)), recv_endpoint);
+      udp_out.send_to(boost::asio::buffer(reinterpret_cast<char*>(&send_data), sizeof(send_data)), recv_endpoint);
 
       REQUIRE(send_data == received.get());
     }
@@ -78,6 +77,37 @@ TEST_CASE("UDP istream tests") {
       udp_out.send_to(boost::asio::buffer("\n"), recv_endpoint);
 
       REQUIRE(send_data == received.get());
+    }
+  }
+
+  SECTION("asynchronous receive") {
+    auto mtx           = std::mutex{};
+    auto data_received = std::condition_variable{};
+
+    SECTION("A string can be received via formatted stream extraction") {
+      auto udp_in = raven::udp::istream{io, test_port};
+
+      auto recv_data       = std::string{};
+      auto receive_a_value = [&](auto&& is, size_t n) {
+        is.read(recv_data.data(), n);
+
+        auto lock = std::unique_lock{mtx};
+        data_received.notify_all();
+      };
+
+      udp_in >> receive_a_value;
+
+      auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
+
+      auto send_data = std::string{"hello, Async UDP Recv!"};
+
+      auto lock = std::unique_lock{mtx};
+      udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
+      udp_out.send_to(boost::asio::buffer("\n"), recv_endpoint);
+
+      data_received.wait(lock);
+
+      REQUIRE(send_data == recv_data);
     }
   }
 }

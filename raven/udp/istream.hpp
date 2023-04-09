@@ -57,6 +57,24 @@ namespace detail {
       return bytes_recvd;
     }
 
+    template<async_recv_fn_like Callback_T>
+    void async_read([[maybe_unused]] Callback_T&& callback) {
+      auto recv_buf = _recv_data.prepare(_recv_buf_size);
+      _socket.async_receive_from(recv_buf, _endpoint, [this](auto&& err, auto&& n) {
+        if (err) {
+          return;
+        }
+
+        _recv_data.commit(n);
+
+        auto data_stream = std::istream{&_recv_data};
+        callback(data_stream, n);
+
+        _recv_data.consume(n);
+        // async_read(callback);
+      });
+    }
+
    private:
     [[nodiscard]] static boost::asio::ip::udp::endpoint _resolve_endpoint(boost::asio::io_context& io,
                                                                           std::string host,
@@ -85,6 +103,11 @@ istream& operator>>(istream& is, Range_T&& bytes) {
   }
 
   return is;
+}
+
+template <async_recv_fn_like Callback_T>
+istream& operator>>(istream& is, Callback_T&& callback) {
+  is->async_read(std::forward<Callback_T>(callback));
 }
 
 }  // namespace raven::udp

@@ -3,7 +3,9 @@
 #include <wite/io/concepts.hpp>
 
 #include <cstdint>
+#include <istream>
 #include <tuple>
+#include <type_traits>
 
 namespace raven::udp {
 
@@ -19,5 +21,15 @@ concept contiguous_byte_range_like = requires(T& t) {
                                        std::ignore = t.size();
                                        std::ignore = t.data();
                                      };
+
+namespace detail {
+
+  // Trick from https://stackoverflow.com/a/41272560
+  template <typename T>
+  std::add_lvalue_reference_t<T> make_lval();
+}
+
+template <typename T>
+concept async_recv_fn_like = requires(T& t) { t(detail::make_lval<std::istream>(), size_t{0}); };
 
 }  // namespace raven::udp
