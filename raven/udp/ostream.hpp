@@ -10,13 +10,13 @@
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/stream.hpp>
 
+#include <chrono>
 #include <cstdint>
 #include <istream>
 #include <memory>
 #include <span>
 #include <string>
 #include <thread>
-#include <chrono>
 
 namespace boost::asio {
 class io_context;
@@ -73,13 +73,26 @@ namespace detail {
 }  // namespace detail
 
 using ostreambuf = boost::iostreams::stream_buffer<detail::sink>;
-using ostream    = boost::iostreams::stream<detail::sink>;
+class ostream : public boost::iostreams::stream<detail::sink> {
+ public:
+  explicit ostream(std::string host, std::uint16_t port) : boost::iostreams::stream<detail::sink>{std::move(host), port} {}
+};
 
 struct flush_t {};
 constexpr auto flush = flush_t{};
 
 inline std::ostream& operator<<(std::ostream& os, const flush_t&) {
   os.flush();
+  return os;
+}
+
+template <contiguous_byte_range_like Range_T>
+  requires(not std::is_same_v<std::string, std::decay_t<Range_T>>)
+ostream& operator<<(ostream& os, Range_T&& bytes) {
+  if (not bytes.empty()) {
+    os.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  }
+
   return os;
 }
 

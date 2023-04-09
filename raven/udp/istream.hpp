@@ -17,6 +17,7 @@
 #include <span>
 #include <string>
 #include <thread>
+#include <span>
 
 namespace boost::asio {
 class io_context;
@@ -71,6 +72,19 @@ namespace detail {
 }  // namespace detail
 
 using istreambuf = boost::iostreams::stream_buffer<detail::source>;
-using istream    = boost::iostreams::stream<detail::source>;
+class istream : public boost::iostreams::stream<detail::source> {
+ public:
+  istream(boost::asio::io_context& io, port_number port) : boost::iostreams::stream<detail::source>{io, port} {}
+};
+
+template <contiguous_byte_range_like Range_T>
+  requires(not std::is_same_v<std::string, std::decay_t<Range_T>>)
+istream& operator>>(istream& is, Range_T&& bytes) {
+  if (not bytes.empty()) {
+    is.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+  }
+
+  return is;
+}
 
 }  // namespace raven::udp
