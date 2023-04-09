@@ -4,6 +4,7 @@
 #include "udp/types.hpp"
 
 #include "test/udp_receiver.hpp"
+#include "test/io_runner.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -89,6 +90,7 @@ TEST_CASE("UDP istream tests") {
 
       auto recv_data       = std::string{};
       auto receive_a_value = [&](auto&& is, size_t n) {
+        recv_data.resize(n);
         is.read(recv_data.data(), n);
 
         auto lock = std::unique_lock{mtx};
@@ -96,6 +98,8 @@ TEST_CASE("UDP istream tests") {
       };
 
       udp_in >> receive_a_value;
+
+      auto _ = raven::test::io_runner{io};
 
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 

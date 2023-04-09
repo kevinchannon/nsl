@@ -6,6 +6,7 @@
 
 #include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/udp.hpp>
+#include <boost/asio/streambuf.hpp>
 #include <boost/iostreams/device/array.hpp>
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/stream.hpp>
@@ -34,6 +35,8 @@ namespace detail {
 
       boost::asio::io_context& io;
       boost::asio::ip::udp::socket socket;
+      static constexpr auto recv_buf_size = 4096;
+      boost::asio::streambuf recv_data;
     };
 
    public:
@@ -59,18 +62,18 @@ namespace detail {
 
     template<async_recv_fn_like Callback_T>
     void async_read([[maybe_unused]] Callback_T&& callback) {
-      auto recv_buf = _recv_data.prepare(_recv_buf_size);
-      _socket.async_receive_from(recv_buf, _endpoint, [this](auto&& err, auto&& n) {
+      auto recv_buf = _kernel->recv_data.prepare(_kernel->recv_buf_size);
+      _kernel->socket.async_receive(recv_buf, [this, &callback](auto&& err, auto&& n) {
         if (err) {
           return;
         }
 
-        _recv_data.commit(n);
+        _kernel->recv_data.commit(n);
 
-        auto data_stream = std::istream{&_recv_data};
+        auto data_stream = std::istream{&_kernel->recv_data};
         callback(data_stream, n);
 
-        _recv_data.consume(n);
+        _kernel->recv_data.consume(n);
         // async_read(callback);
       });
     }
@@ -92,7 +95,7 @@ namespace detail {
 using istreambuf = boost::iostreams::stream_buffer<detail::source>;
 class istream : public boost::iostreams::stream<detail::source> {
  public:
-  istream(boost::asio::io_context& io, port_number port) : boost::iostreams::stream<detail::source>{io, port} {}
+  explicit istream(boost::asio::io_context& io, port_number port) : boost::iostreams::stream<detail::source>{io, port} {}
 };
 
 template <contiguous_byte_range_like Range_T>
@@ -108,6 +111,7 @@ istream& operator>>(istream& is, Range_T&& bytes) {
 template <async_recv_fn_like Callback_T>
 istream& operator>>(istream& is, Callback_T&& callback) {
   is->async_read(std::forward<Callback_T>(callback));
+  return is;
 }
 
 }  // namespace raven::udp
