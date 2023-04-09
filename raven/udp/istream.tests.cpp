@@ -134,11 +134,10 @@ TEST_CASE("UDP istream tests") {
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 
       for (auto i = 0u; i < 10; ++i) {
-        auto send_data = std::format("hello, Async UDP Recv! {}", i);
+        auto send_data = std::format("hello, Async UDP Recv! {}\n", i);
 
-        auto lock = std::unique_lock{mtx};
+        std::unique_lock lock{mtx}; 
         udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
-        udp_out.send_to(boost::asio::buffer("\n"), recv_endpoint);
 
         data_received.wait(lock);
 
