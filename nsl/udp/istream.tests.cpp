@@ -29,7 +29,7 @@ using namespace std::chrono_literals;
 using namespace nlohmann;
 
 std::pair<boost::asio::ip::udp::socket, boost::asio::ip::udp::endpoint> get_connected_socket(boost::asio::io_context& io,
-                                                                                             raven::udp::port_number port) {
+                                                                                             nsl::udp::port_number port) {
   auto resolver = boost::asio::ip::udp::resolver{io};
   auto query    = boost::asio::ip::udp::resolver::query{
       boost::asio::ip::udp::v4(), "localhost", std::to_string(static_cast<std::uint32_t>(port))};
@@ -43,11 +43,11 @@ std::pair<boost::asio::ip::udp::socket, boost::asio::ip::udp::endpoint> get_conn
 
 TEST_CASE("UDP istream tests") {
   auto io        = boost::asio::io_context{};
-  auto test_port = raven::udp::port_number{6078};
+  auto test_port = nsl::udp::port_number{6078};
 
   SECTION("blocking receive") {
     SECTION("An int can be received via unformatted read") {
-      auto udp_in = raven::udp::istream{io, test_port};
+      auto udp_in = nsl::udp::istream{io, test_port};
 
       auto received = std::async([&]() {
         auto recv_buf = uint32_t{0};
@@ -64,7 +64,7 @@ TEST_CASE("UDP istream tests") {
     }
 
     SECTION("An int can be received via formatted stream extraction") {
-      auto udp_in = raven::udp::istream{io, test_port};
+      auto udp_in = nsl::udp::istream{io, test_port};
 
       auto received = std::async([&]() {
         auto recv_buf = uint32_t{0};
@@ -87,7 +87,7 @@ TEST_CASE("UDP istream tests") {
     auto data_received = std::condition_variable{};
 
     SECTION("A string can be received via formatted stream extraction") {
-      auto udp_in = raven::udp::istream{io, test_port};
+      auto udp_in = nsl::udp::istream{io, test_port};
 
       auto recv_data       = std::string{};
       auto receive_a_value = [&](auto&& is, size_t n) {
@@ -100,7 +100,7 @@ TEST_CASE("UDP istream tests") {
 
       udp_in >> receive_a_value;
 
-      auto _ = raven::test::io_runner{io};
+      auto _ = nsl::test::io_runner{io};
 
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 
@@ -116,7 +116,7 @@ TEST_CASE("UDP istream tests") {
     }
 
     SECTION("several strings can be received via formatted stream extraction") {
-      auto udp_in = raven::udp::istream{io, test_port};
+      auto udp_in = nsl::udp::istream{io, test_port};
 
       auto recv_data       = std::string{};
       auto receive_a_value = [&](auto&& is, size_t n) {
@@ -129,7 +129,7 @@ TEST_CASE("UDP istream tests") {
 
       udp_in >> receive_a_value;
 
-      auto _ = raven::test::io_runner{io};
+      auto _ = nsl::test::io_runner{io};
 
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 

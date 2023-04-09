@@ -7,7 +7,7 @@
 #include <tuple>
 #include <type_traits>
 
-namespace raven::udp {
+namespace nsl::udp {
 
 using port_number = std::uint16_t;
 
@@ -32,4 +32,4 @@ namespace detail {
 template <typename T>
 concept async_recv_fn_like = requires(T& t) { t(detail::make_lval<std::istream>(), size_t{0}); };
 
-}  // namespace raven::udp
+}  // namespace nsl::udp

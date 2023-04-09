@@ -17,14 +17,14 @@
 #include <stdexcept>
 #include <string>
 
-namespace raven::test::udp {
+namespace nsl::test::udp {
 
   using callback_t = std::function<void(std::istream&, size_t)>;
 
 class receiver {
  public:
   explicit receiver(boost::asio::io_context& io,
-                         ::raven::udp::port_number port,
+                         ::nsl::udp::port_number port,
                          callback_t handle_data,
                          std::optional<int> recv_buf_size = std::nullopt)
       : _socket(io, boost::asio::ip::udp::endpoint{boost::asio::ip::udp::v4(), port})
@@ -40,7 +40,7 @@ class receiver {
 
   void stop() { _socket.close(); }
 
-  ::raven::udp::port_number connected_port() const { return _endpoint.port(); }
+  ::nsl::udp::port_number connected_port() const { return _endpoint.port(); }
 
  private:
   [[nodiscard]] static boost::asio::ip::udp::endpoint _resolve_endpoint(boost::asio::io_context& io,
@@ -75,4 +75,4 @@ class receiver {
   static constexpr auto _recv_buf_size = 8192;
   boost::asio::streambuf _recv_data;
 };
-}  // namespace raven::test::udp
+}  // namespace nsl::test::udp

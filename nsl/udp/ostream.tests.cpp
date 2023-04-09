@@ -28,7 +28,7 @@
 using namespace std::chrono_literals;
 
 TEST_CASE("UDP ostream tests") {
-  using namespace raven;
+  using namespace nsl;
 
   auto rng             = std::mt19937_64{1110394};  // arbitrary seed.
   auto io              = boost::asio::io_context{};
@@ -68,7 +68,7 @@ TEST_CASE("UDP ostream tests") {
     };
 
     buffer.resize(4096);
-    auto input_socket = raven::test::udp::receiver{io, test_port, std::move(process_data), static_cast<int>(data_size)};
+    auto input_socket = nsl::test::udp::receiver{io, test_port, std::move(process_data), static_cast<int>(data_size)};
     auto io_runner    = test::io_runner{io};
 
     auto udp_stream = udp::ostream{"localhost", test_port};

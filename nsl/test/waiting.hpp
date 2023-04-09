@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 
-namespace raven::test {
+namespace nsl::test {
 
 template <typename Condition_T>
 [[nodiscard]] bool wait_for(Condition_T condition, std::chrono::milliseconds timeout) {

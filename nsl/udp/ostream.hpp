@@ -22,7 +22,7 @@ namespace boost::asio {
 class io_context;
 }
 
-namespace raven::udp {
+namespace nsl::udp {
 
 namespace detail {
   class sink {
@@ -96,4 +96,4 @@ ostream& operator<<(ostream& os, Range_T&& bytes) {
   return os;
 }
 
-}  // namespace raven::udp
+}  // namespace nsl::udp

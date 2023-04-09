@@ -19,7 +19,7 @@
 #include <vector>
 
 using nlohmann::json;
-using namespace raven;
+using namespace nsl;
 
 TEST_CASE("reading and writing to UDP streams") {
   auto io = boost::asio::io_context{};

@@ -24,7 +24,7 @@ namespace boost::asio {
 class io_context;
 }
 
-namespace raven::udp {
+namespace nsl::udp {
 
 namespace detail {
   class source {
@@ -114,4 +114,4 @@ istream& operator>>(istream& is, Callback_T&& callback) {
   return is;
 }
 
-}  // namespace raven::udp
+}  // namespace nsl::udp
