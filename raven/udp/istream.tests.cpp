@@ -15,6 +15,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <format>
 #include <future>
 #include <iomanip>
 #include <iostream>
@@ -112,6 +113,37 @@ TEST_CASE("UDP istream tests") {
       data_received.wait(lock);
 
       REQUIRE(send_data == recv_data);
+    }
+
+    SECTION("several strings can be received via formatted stream extraction") {
+      auto udp_in = raven::udp::istream{io, test_port};
+
+      auto recv_data       = std::string{};
+      auto receive_a_value = [&](auto&& is, size_t n) {
+        recv_data.resize(n);
+        is.read(recv_data.data(), n);
+
+        auto lock = std::unique_lock{mtx};
+        data_received.notify_all();
+      };
+
+      udp_in >> receive_a_value;
+
+      auto _ = raven::test::io_runner{io};
+
+      auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
+
+      for (auto i = 0u; i < 10; ++i) {
+        auto send_data = std::format("hello, Async UDP Recv! {}", i);
+
+        auto lock = std::unique_lock{mtx};
+        udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
+        udp_out.send_to(boost::asio::buffer("\n"), recv_endpoint);
+
+        data_received.wait(lock);
+
+        REQUIRE(send_data == recv_data);
+      }
     }
   }
 }

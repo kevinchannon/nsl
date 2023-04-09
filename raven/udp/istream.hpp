@@ -74,7 +74,7 @@ namespace detail {
         callback(data_stream, n);
 
         _kernel->recv_data.consume(n);
-        // async_read(callback);
+        async_read(callback);
       });
     }
 
