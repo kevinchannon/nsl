@@ -89,3 +89,8 @@ This example is a little more complex than the ones above because you need to ma
 
 ### Send data asynchronously
 TODO: Implement this...
+
+## TODO list
+* Async UDP send
+* Set the fail bit properly if you try to do a synchronous send/recv at the same time as an asynch send/recv
+* TCP streams
