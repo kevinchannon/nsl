@@ -74,20 +74,15 @@ namespace detail {
     void async_read([[maybe_unused]] Callback_T&& callback) {
       _kernel->async_read_in_progress = true;
       auto recv_buf                   = _kernel->recv_data.prepare(_kernel->recv_buf_size);
-      _kernel->socket.async_receive(recv_buf, [this, &callback](auto&& err, auto&& n) {
+
+      _kernel->socket.async_receive(recv_buf, [this, cb = std::forward<Callback_T>(callback)](auto&& err, auto&& n) {
         if (err) {
-          auto lock = std::unique_lock{_kernel->mtx};
+          { auto lock = std::unique_lock{_kernel->mtx}; }
           _kernel->exiting_async_read.notify_all();
           return;
         }
 
-        _kernel->recv_data.commit(n);
-
-        auto data_stream = std::istream{&_kernel->recv_data};
-        callback(data_stream, n);
-
-        _kernel->recv_data.consume(n);
-        async_read(callback);
+        async_read(_do_receive_and_handle_data(std::move(cb), n));
       });
     }
 
@@ -107,6 +102,18 @@ namespace detail {
       boost::asio::ip::udp::resolver::query query(
           boost::asio::ip::udp::v4(), host, std::to_string(static_cast<std::uint32_t>(port)));
       return *resolver.resolve(query);
+    }
+
+    template <async_recv_fn_like Callback_T>
+    [[nodiscard]] Callback_T _do_receive_and_handle_data(Callback_T callback, size_t n) {
+      _kernel->recv_data.commit(n);
+
+      auto data_stream = std::istream{&_kernel->recv_data};
+      callback(data_stream, n);
+
+      _kernel->recv_data.consume(n);
+
+      return std::move(callback);
     }
 
     void _do_cancel_async_read() {
