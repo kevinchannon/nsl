@@ -92,17 +92,11 @@ namespace detail {
     }
 
     void cancel_async_read() {
-      using namespace std::chrono_literals;
-
       if (not _kernel->async_read_in_progress) {
         return;
       }
 
-      auto lock = std::unique_lock{_kernel->mtx};
-      _kernel->socket.cancel();
-      _kernel->exiting_async_read.wait(lock);
-      std::this_thread::sleep_for(5ms);
-      _kernel->async_read_in_progress = false;
+      _do_cancel_async_read();
     }
 
    private:
@@ -113,6 +107,19 @@ namespace detail {
       boost::asio::ip::udp::resolver::query query(
           boost::asio::ip::udp::v4(), host, std::to_string(static_cast<std::uint32_t>(port)));
       return *resolver.resolve(query);
+    }
+
+    void _do_cancel_async_read() {
+      auto lock = std::unique_lock{_kernel->mtx};
+      _kernel->socket.cancel();
+      _kernel->exiting_async_read.wait(lock);
+
+      // The last point that we have visibility on the process is marked by the condition variable, however
+      // there is still stuff to happen after that point, so we wait for a bit.
+      // Find a wait to NOT DO THIS.
+      std::this_thread::sleep_for(std::chrono::milliseconds{2});
+
+      _kernel->async_read_in_progress = false;
     }
 
     std::shared_ptr<kernel> _kernel;
