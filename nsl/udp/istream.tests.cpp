@@ -5,6 +5,7 @@
 
 #include "test/io_runner.hpp"
 #include "test/udp_receiver.hpp"
+#include "test/waiting.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -163,20 +164,11 @@ TEST_CASE("UDP istream tests") {
       SECTION("and cancelling the async read allows sync read to succeed") {
         udp_in.cancel_async_recv();
 
-        std::unique_lock lock{mtx};
-        auto ready_to_receive = std::condition_variable{};
-
-        auto recv_value = std::async([&mtx, &ready_to_receive, &udp_in]() {
+        auto recv_value = nsl::test::running_async([&]() {
           auto recv_str = std::string{};
-
-          { std::unique_lock lock{mtx}; }
-          ready_to_receive.notify_all();
-
           udp_in >> recv_str;
           return recv_str;
         });
-
-        ready_to_receive.wait(lock);
 
         auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 
