@@ -11,6 +11,8 @@
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/stream.hpp>
 
+#include <wite/core/scope.hpp>
+
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -41,6 +43,7 @@ namespace detail {
       static constexpr auto recv_buf_size = 4096;
       boost::asio::streambuf recv_data{};
       std::atomic_bool async_read_in_progress{false};
+      std::atomic_bool sync_read_in_progress{false};
       std::mutex mtx;
       std::condition_variable exiting_async_read;
     };
@@ -65,13 +68,20 @@ namespace detail {
         return -1;
       }
 
-      auto bytes_recvd = _kernel->socket.receive(boost::asio::buffer(s, n));
+      _kernel->sync_read_in_progress = true;
+      auto _                         = wite::scope_exit{[this]() { _kernel->sync_read_in_progress = false; }};
 
+      auto bytes_recvd = _kernel->socket.receive(boost::asio::buffer(s, n));
+      
       return bytes_recvd;
     }
 
     template <async_recv_fn_like Callback_T>
-    void async_read([[maybe_unused]] Callback_T&& callback) {
+    bool async_read([[maybe_unused]] Callback_T&& callback) {
+      if (_kernel->sync_read_in_progress.load()) {
+        return false;
+      }
+
       _kernel->async_read_in_progress = true;
       auto recv_buf                   = _kernel->recv_data.prepare(_kernel->recv_buf_size);
 
@@ -84,14 +94,24 @@ namespace detail {
 
         async_read(_do_receive_and_handle_data(std::move(cb), n));
       });
+
+      return true;
     }
 
     void cancel_async_read() {
-      if (not _kernel->async_read_in_progress) {
+      if (not _kernel->async_read_in_progress.load()) {
         return;
       }
 
       _do_cancel_async_read();
+    }
+
+    void cancel_sync_read() {
+      if (not _kernel->sync_read_in_progress.load()) {
+        return;
+      }
+
+      _do_cancel_sync_read();
     }
 
    private:
@@ -129,6 +149,15 @@ namespace detail {
       _kernel->async_read_in_progress = false;
     }
 
+    void _do_cancel_sync_read() {
+      auto lock = std::unique_lock{_kernel->mtx};
+      _kernel->socket.cancel();
+
+      std::this_thread::sleep_for(std::chrono::milliseconds{2});
+
+      _kernel->sync_read_in_progress = false;
+    }
+
     std::shared_ptr<kernel> _kernel;
   };
 }  // namespace detail
@@ -141,6 +170,15 @@ class istream : public boost::iostreams::stream<detail::source> {
   void cancel_async_recv() {
     (*this)->cancel_async_read();
     
+    // Clear any error that previously occurred on the stream, since someone may have tried to synchronously read the stream
+    // while the async read was in progress. This will have put the stream in an error state and it will not be possible to
+    // read from the stream until that error is cleared.
+    clear();
+  }
+
+  void cancel_sync_recv() {
+    (*this)->cancel_sync_read();
+
     // Clear any error that previously occurred on the stream, since someone may have tried to synchronously read the stream
     // while the async read was in progress. This will have put the stream in an error state and it will not be possible to
     // read from the stream until that error is cleared.
@@ -160,7 +198,10 @@ istream& operator>>(istream& is, Range_T&& bytes) {
 
 template <async_recv_fn_like Callback_T>
 istream& operator>>(istream& is, Callback_T&& callback) {
-  is->async_read(std::forward<Callback_T>(callback));
+  if (not is->async_read(std::forward<Callback_T>(callback))) {
+    is.setstate(std::ios::failbit);
+  }
+
   return is;
 }
 

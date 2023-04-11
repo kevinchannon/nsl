@@ -145,7 +145,7 @@ TEST_CASE("UDP istream tests") {
       }
     }
 
-    SECTION("Trying to do a synchronous read while an a synchronous one is in progress fails") {
+    SECTION("trying to do a synchronous read while an async one is in progress fails") {
       auto udp_in = nsl::udp::istream{io, test_port};
 
       auto receive_a_value = [&](auto&&, size_t) {
@@ -176,6 +176,50 @@ TEST_CASE("UDP istream tests") {
 
         REQUIRE_FALSE(udp_in.fail());
         REQUIRE("hello" == recv_value.get());
+      }
+    }
+
+    SECTION("trying to do an async read while a synchronous one is in progress fails") {
+      auto udp_in = nsl::udp::istream{io, test_port};
+
+      auto recv_value = nsl::test::running_async([&]() {
+        auto recv_str = std::string{};
+        udp_in >> recv_str;
+        return recv_str;
+      });
+
+      std::this_thread::sleep_for(10ms);
+
+      udp_in >> [](auto&&, size_t) {};
+
+      REQUIRE(udp_in.fail());
+
+      SECTION("after cancelling the sync read, an async read is allowed") {
+        udp_in.cancel_sync_recv();
+
+        auto recv_data       = std::string{};
+        auto receive_a_value = [&](auto&& is, size_t n) {
+          recv_data.resize(n);
+          is.read(recv_data.data(), n);
+
+          auto lock = std::unique_lock{mtx};
+          data_received.notify_all();
+        };
+
+        udp_in >> receive_a_value;
+
+        auto _ = nsl::test::io_runner{io};
+
+        auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
+
+        auto send_data = std::string{"hello!\n"};
+
+        auto lock = std::unique_lock{mtx};
+        udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
+
+        data_received.wait(lock);
+
+        REQUIRE(send_data == recv_data);
       }
     }
   }
