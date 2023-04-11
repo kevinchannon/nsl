@@ -11,6 +11,7 @@
 #include <boost/iostreams/device/back_inserter.hpp>
 #include <boost/iostreams/stream.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <istream>
@@ -18,7 +19,6 @@
 #include <span>
 #include <string>
 #include <thread>
-#include <span>
 
 namespace boost::asio {
 class io_context;
@@ -31,12 +31,18 @@ namespace detail {
     struct kernel {
       kernel(boost::asio::io_context& io, boost::asio::ip::udp::endpoint endpoint) : io{io}, socket{io, endpoint} {}
 
-      ~kernel() { socket.close(); }
+      ~kernel() {
+        socket.shutdown(boost::asio::ip::udp::socket::shutdown_both);
+        socket.close();
+      }
 
       boost::asio::io_context& io;
       boost::asio::ip::udp::socket socket;
       static constexpr auto recv_buf_size = 4096;
-      boost::asio::streambuf recv_data;
+      boost::asio::streambuf recv_data{};
+      std::atomic_bool async_read_in_progress{false};
+      std::mutex mtx;
+      std::condition_variable exiting_async_read;
     };
 
    public:
@@ -55,16 +61,23 @@ namespace detail {
     ~source() {}
 
     [[nodiscard]] std::streamsize read(char* s, std::streamsize n) {
+      if (_kernel->async_read_in_progress) {
+        return -1;
+      }
+
       auto bytes_recvd = _kernel->socket.receive(boost::asio::buffer(s, n));
 
       return bytes_recvd;
     }
 
-    template<async_recv_fn_like Callback_T>
+    template <async_recv_fn_like Callback_T>
     void async_read([[maybe_unused]] Callback_T&& callback) {
-      auto recv_buf = _kernel->recv_data.prepare(_kernel->recv_buf_size);
+      _kernel->async_read_in_progress = true;
+      auto recv_buf                   = _kernel->recv_data.prepare(_kernel->recv_buf_size);
       _kernel->socket.async_receive(recv_buf, [this, &callback](auto&& err, auto&& n) {
         if (err) {
+          auto lock = std::unique_lock{_kernel->mtx};
+          _kernel->exiting_async_read.notify_all();
           return;
         }
 
@@ -76,6 +89,20 @@ namespace detail {
         _kernel->recv_data.consume(n);
         async_read(callback);
       });
+    }
+
+    void cancel_async_read() {
+      using namespace std::chrono_literals;
+
+      if (not _kernel->async_read_in_progress) {
+        return;
+      }
+
+      auto lock = std::unique_lock{_kernel->mtx};
+      _kernel->socket.cancel();
+      _kernel->exiting_async_read.wait(lock);
+      std::this_thread::sleep_for(5ms);
+      _kernel->async_read_in_progress = false;
     }
 
    private:
@@ -96,6 +123,15 @@ using istreambuf = boost::iostreams::stream_buffer<detail::source>;
 class istream : public boost::iostreams::stream<detail::source> {
  public:
   explicit istream(boost::asio::io_context& io, port_number port) : boost::iostreams::stream<detail::source>{io, port} {}
+
+  void cancel_async_recv() {
+    (*this)->cancel_async_read();
+    
+    // Clear any error that previously occurred on the stream, since someone may have tried to synchronously read the stream
+    // while the async read was in progress. This will have put the stream in an error state and it will not be possible to
+    // read from the stream until that error is cleared.
+    clear();
+  }
 };
 
 template <contiguous_byte_range_like Range_T>

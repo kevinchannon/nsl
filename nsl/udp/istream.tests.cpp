@@ -3,8 +3,8 @@
 #include "udp/istream.hpp"
 #include "udp/types.hpp"
 
-#include "test/udp_receiver.hpp"
 #include "test/io_runner.hpp"
+#include "test/udp_receiver.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -104,11 +104,10 @@ TEST_CASE("UDP istream tests") {
 
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 
-      auto send_data = std::string{"hello, Async UDP Recv!"};
+      auto send_data = std::string{"hello, Async UDP Recv!\n"};
 
       auto lock = std::unique_lock{mtx};
       udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
-      udp_out.send_to(boost::asio::buffer("\n"), recv_endpoint);
 
       data_received.wait(lock);
 
@@ -136,12 +135,55 @@ TEST_CASE("UDP istream tests") {
       for (auto i = 0u; i < 10; ++i) {
         auto send_data = std::format("hello, Async UDP Recv! {}\n", i);
 
-        std::unique_lock lock{mtx}; 
+        std::unique_lock lock{mtx};
         udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
 
         data_received.wait(lock);
 
         REQUIRE(send_data == recv_data);
+      }
+    }
+
+    SECTION("Trying to do a synchronous read while an a synchronous one is in progress fails") {
+      auto udp_in = nsl::udp::istream{io, test_port};
+
+      auto receive_a_value = [&](auto&&, size_t) {
+        // Do nothing.
+      };
+
+      udp_in >> receive_a_value;
+
+      auto io_runner = std::optional<nsl::test::io_runner>{io};
+
+      auto dummy = std::string{"foo"};
+      udp_in >> dummy;
+
+      REQUIRE(udp_in.fail());
+
+      SECTION("and cancelling the async read allows sync read to succeed") {
+        udp_in.cancel_async_recv();
+
+        std::unique_lock lock{mtx};
+        auto ready_to_receive = std::condition_variable{};
+
+        auto recv_value = std::async([&mtx, &ready_to_receive, &udp_in]() {
+          auto recv_str = std::string{};
+
+          { std::unique_lock lock{mtx}; }
+          ready_to_receive.notify_all();
+
+          udp_in >> recv_str;
+          return recv_str;
+        });
+
+        ready_to_receive.wait(lock);
+
+        auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
+
+        udp_out.send_to(boost::asio::buffer("hello\n"), recv_endpoint);
+
+        REQUIRE_FALSE(udp_in.fail());
+        REQUIRE("hello" == recv_value.get());
       }
     }
   }
