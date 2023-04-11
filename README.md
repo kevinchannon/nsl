@@ -92,7 +92,6 @@ TODO: Implement this...
 
 ## TODO list
 * Async UDP send
-* Set the fail bit properly if you try to do a synchronous send/recv at the same time as an asynch send/recv
 * Work out how to recieve from any remove port, without having to name it in istream constructor
 * TCP streams
 * Packaging
