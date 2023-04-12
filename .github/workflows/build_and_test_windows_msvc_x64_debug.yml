@@ -30,7 +30,6 @@ jobs:
       - name: Resolve dependencies
         run: |
           conan profile new default --detect
-          conan profile update settings.compiler.libcxx=libstdc++11 default
           conan install . -s build_type=${{env.BUILD_TYPE}} --install-folder=${{github.workspace}}/build/msvc/x64/debug
 
       - name: Configure
