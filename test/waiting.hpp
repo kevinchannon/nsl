@@ -41,7 +41,7 @@ template<typename Fn_T>
 
   thread_running.wait(lock);
 
-  return std::move(result);
+  return result;
 }
 
 }  // namespace test

@@ -1,7 +1,6 @@
 #include "framework.h"
 
-#include <nsl/udp/istream.hpp>
-#include <nsl/udp/ostream.hpp>
+#include <nsl/udp/stream.hpp>
 #include <nsl/udp/types.hpp>
 
 #include "test/io_runner.hpp"
@@ -90,6 +89,36 @@ TEST_CASE("reading and writing to UDP streams") {
 
       auto udp_out = udp::ostream{"localhost", test_port};
       udp_out << sent_json << std::endl;
+
+      data_ready.wait(lock);
+
+      REQUIRE(sent_json == recv_json);
+    }
+  }
+
+  SECTION("IO stream") {
+    auto mtx = std::mutex{};
+
+    SECTION("writing and reading JSON") {
+      auto sent_json = json::parse(R"({"bool_field": true, "int_field": 12345, "string_field": "ahoy there!"})");
+      auto recv_json = json{};
+
+      auto data_ready  = std::condition_variable{};
+      auto lock        = std::unique_lock{mtx};
+      auto handle_json = [&](auto&& is, size_t n) {
+        auto str = std::string(n, '\0');
+        is.read(str.data(), n);
+        recv_json = json::parse(str);
+        { auto _ = std::unique_lock{mtx}; }
+        data_ready.notify_all();
+      };
+
+      auto udp = udp::stream{io, test_port, "localhost", test_port};
+      udp >> handle_json;
+
+      auto _ = test::io_runner{io};
+
+      udp << sent_json << std::endl;
 
       data_ready.wait(lock);
 
