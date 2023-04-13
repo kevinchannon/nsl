@@ -21,6 +21,6 @@ if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
 endif()
 
 # Include sub-projects.
-if (MASTER_PROJECT AND CMAKE_BUILD_TYPE MATCHES Debug)
+if (MASTER_PROJECT)
   add_subdirectory ("test")
-endif() # MASTER_PROJECT AND CMAKE_BUILD_TYPE MATCHES Debug
+endif() # MASTER_PROJECT
