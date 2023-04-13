@@ -13,9 +13,11 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <istream>
 #include <memory>
+#include <mutex>
 #include <span>
 #include <string>
 #include <thread>
@@ -70,7 +72,7 @@ namespace detail {
       auto _                         = wite::scope_exit{[this]() { _kernel->sync_read_in_progress = false; }};
 
       auto bytes_recvd = _kernel->socket.receive(boost::asio::buffer(s, n));
-      
+
       return bytes_recvd;
     }
 
@@ -167,7 +169,7 @@ class istream : public boost::iostreams::stream<detail::source> {
 
   void cancel_async_recv() {
     (*this)->cancel_async_read();
-    
+
     // Clear any error that previously occurred on the stream, since someone may have tried to synchronously read the stream
     // while the async read was in progress. This will have put the stream in an error state and it will not be possible to
     // read from the stream until that error is cleared.
