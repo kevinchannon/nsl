@@ -1,8 +1,6 @@
 #pragma once
 
-#include "framework.h"
-
-#include "udp/types.hpp"
+#include <nsl/udp/types.hpp>
 
 #include <boost/asio.hpp>
 

@@ -1,8 +1,8 @@
 #include "framework.h"
 
-#include "udp/ostream.hpp"
-#include "udp/istream.hpp"
-#include "udp/types.hpp"
+#include <nsl/udp/ostream.hpp>
+#include <nsl/udp/istream.hpp>
+#include <nsl/udp/types.hpp>
 
 #include "test/udp_receiver.hpp"
 #include "test/io_runner.hpp"

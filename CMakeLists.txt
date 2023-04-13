@@ -1,9 +1,26 @@
-﻿# CMakeList.txt : Top-level CMake project file, do global configuration
-# and include sub-projects here.
-#
-cmake_minimum_required (VERSION 3.15)
+﻿cmake_minimum_required (VERSION 3.15)
 
-project ("nsl")
+project (nsl)
+
+add_library(nsl INTERFACE)
+add_library(nsl::nsl ALIAS nsl)
+
+set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_include_directories(
+  nsl
+  INTERFACE
+    $<BUILD_INTERFACE:${INCLUDE_DIR}>
+)
+
+# I stole this mechanism from https://github.com/rollbear/trompeloeil/blob/09e013bc0026630f6e721c1ba61a42aa6256d5eb/CMakeLists.txt#L32
+# It allows us to be included gracefully in another project via CMake FetchContent
+set(MASTER_PROJECT OFF)
+if (${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_SOURCE_DIR})
+  set(MASTER_PROJECT ON)
+endif()
 
 # Include sub-projects.
-add_subdirectory ("nsl")
+if (MASTER_PROJECT AND CMAKE_BUILD_TYPE MATCHES Debug)
+  add_subdirectory ("test")
+endif() # MASTER_PROJECT AND CMAKE_BUILD_TYPE MATCHES Debug

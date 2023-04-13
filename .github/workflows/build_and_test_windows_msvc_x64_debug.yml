@@ -39,6 +39,6 @@ jobs:
         run: cmake --build ${{github.workspace}}/build/msvc/x64/debug --config Debug
 
       - name: Test
-        working-directory: ${{github.workspace}}\build\msvc\x64\debug\nsl\test\Debug
+        working-directory: ${{github.workspace}}\build\msvc\x64\debug\test\Debug
         shell: cmd
-        run: ${{github.workspace}}\build\msvc\x64\debug\nsl\test\Debug\nslTest.exe
+        run: ${{github.workspace}}\build\msvc\x64\debug\test\Debug\nslTest.exe

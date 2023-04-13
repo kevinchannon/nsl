@@ -13,9 +13,9 @@ FetchContent_MakeAvailable(wite)
 enable_testing()
 
 add_executable(nslTest
-  "../udp/ostream.tests.cpp"
-  "../udp/istream.tests.cpp"
-  "../udp/stream.tests.cpp"
+  "ostream.tests.cpp"
+  "istream.tests.cpp"
+  "stream.tests.cpp"
 )
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -41,6 +41,7 @@ target_link_libraries(nslTest
     CONAN_PKG::catch2
     CONAN_PKG::boost
     CONAN_PKG::nlohmann_json
+    nsl::nsl
 )
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)

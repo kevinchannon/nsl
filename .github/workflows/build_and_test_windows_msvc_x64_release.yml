@@ -39,6 +39,6 @@ jobs:
         run: cmake --build ${{github.workspace}}/build/msvc/x64/release --config ${{env.BUILD_TYPE}}
 
       - name: Test
-        working-directory: ${{github.workspace}}\build\msvc\x64\release\nsl\test\${{env.BUILD_TYPE}}
+        working-directory: ${{github.workspace}}\build\msvc\x64\release\test\${{env.BUILD_TYPE}}
         shell: cmd
-        run: ${{github.workspace}}\build\msvc\x64\release\nsl\test\${{env.BUILD_TYPE}}\nslTest.exe
+        run: ${{github.workspace}}\build\msvc\x64\release\test\${{env.BUILD_TYPE}}\nslTest.exe

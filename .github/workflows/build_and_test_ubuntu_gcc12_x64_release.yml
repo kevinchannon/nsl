@@ -38,6 +38,7 @@ jobs:
         run: |
           conan profile new default --detect
           conan install . -s build_type=${{env.BUILD_TYPE}} --install-folder=${{github.workspace}}/build/gcc/x64/debug --build=missing
+
       - name: Configure
         run: cmake -B ${{github.workspace}}/build/gcc/x64/release -DCMAKE_BUILD_TYPE=Release
 
@@ -45,5 +46,5 @@ jobs:
         run: cmake --build ${{github.workspace}}/build/gcc/x64/release --config Release --target all
 
       - name: Test
-        working-directory: ${{github.workspace}}/build/gcc/x64/release/test
+        working-directory: ${{github.workspace}}/build/gcc/x64/release/test/Release
         run: ./nstTest
