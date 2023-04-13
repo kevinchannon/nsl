@@ -5,13 +5,13 @@ on:
     branches: [ "master" ]
     paths:
       - nsl/**
-      - .github/workflows/build_and_test_windows_msvc_x64_debug.yml
+      - .github/workflows/build_and_test_windows_msvc_x64_release.yml
       - CMakeLists.txt
   pull_request:
     branches: [ "master" ]
     paths:
       - nsl/**
-      - .github/workflows/build_and_test_windows_msvc_x64_debug.yml
+      - .github/workflows/build_and_test_windows_msvc_x64_release.yml
       - CMakeLists.txt
 
 env:
