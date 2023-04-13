@@ -26,8 +26,18 @@ add_executable(nslTest
   "../udp/stream.tests.cpp"
 )
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+if(NOT DEFINED NO_CONAN)
+  include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+  conan_basic_setup()
+else()
+  FetchContent_Declare(
+  nlohmann
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG        v3.11.2
+)
+
+FetchContent_MakeAvailable(nlohmann)
+endif()
 
 # Find Boost libraries
 find_package(Boost 1.81.0)
@@ -42,6 +52,7 @@ target_compile_options(nslTest PRIVATE
 target_include_directories(nslTest PRIVATE
 	${CMAKE_SOURCE_DIR}
   ${wite_SOURCE_DIR}
+  ${nlohmann_SOURCE_DIR}
 )
 
 target_link_libraries(nslTest

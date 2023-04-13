@@ -26,9 +26,10 @@ jobs:
       - uses: MarkusJx/install-boost@v2.4.4
         with:
           boost_version: 1.81.0
+          toolset: msvc
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build/msvc/x64/debug -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -B ${{github.workspace}}/build/msvc/x64/debug -DCMAKE_BUILD_TYPE=Debug -DNO_CONAN
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build/msvc/x64/debug --config Debug
