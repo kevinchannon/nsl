@@ -4,14 +4,6 @@ cmake_minimum_required(VERSION 3.15)
 Include(FetchContent)
 
 FetchContent_Declare(
-  Catch2
-  GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-  GIT_TAG        v3.3.2
-)
-
-FetchContent_MakeAvailable(Catch2)
-
-FetchContent_Declare(
   wite
 	GIT_REPOSITORY https://github.com/kevinchannon/wite.git
   GIT_TAG v1.0.0
@@ -26,18 +18,8 @@ add_executable(nslTest
   "../udp/stream.tests.cpp"
 )
 
-if(NOT DEFINED NO_CONAN)
-  include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-  conan_basic_setup()
-else()
-  FetchContent_Declare(
-  nlohmann
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG        v3.11.2
-)
-
-FetchContent_MakeAvailable(nlohmann)
-endif()
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
 
 # Find Boost libraries
 find_package(Boost 1.81.0)
@@ -52,12 +34,13 @@ target_compile_options(nslTest PRIVATE
 target_include_directories(nslTest PRIVATE
 	${CMAKE_SOURCE_DIR}
   ${wite_SOURCE_DIR}
-  ${nlohmann_SOURCE_DIR}
 )
 
 target_link_libraries(nslTest
   PRIVATE
-    Catch2::Catch2WithMain
+    CONAN_PKG::catch2
+    CONAN_PKG::boost
+    CONAN_PKG::nlohmann_json
 )
 
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
