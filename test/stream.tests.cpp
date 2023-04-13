@@ -7,16 +7,18 @@
 #include "test/io_runner.hpp"
 #include "test/waiting.hpp"
 
+#include <boost/asio.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <nlohmann/json.hpp>
-#include <boost/asio.hpp>
 #include <wite/collections/make_vector.hpp>
 
 #include <algorithm>
 #include <random>
 #include <thread>
 #include <vector>
+#include <mutex>
+#include <condition_variable>
 
 using nlohmann::json;
 using namespace nsl;
@@ -47,7 +49,7 @@ TEST_CASE("reading and writing to UDP streams") {
     SECTION("writing and reading 1024 bytes") {
       auto sent_bytes = wite::make_vector<std::byte>(wite::arg::reserve{1024});
 
-      auto rng         = std::mt19937{345234};  // arbitrary seed.
+      auto rng = std::mt19937{345234};  // arbitrary seed.
       std::generate_n(std::back_inserter(sent_bytes), 1024, [&]() {
         return static_cast<std::byte>(std::uniform_int<>{0x00, 0xFF}(rng));
       });
@@ -61,6 +63,37 @@ TEST_CASE("reading and writing to UDP streams") {
       udp_out << sent_bytes << udp::flush;
 
       REQUIRE(std::ranges::equal(sent_bytes, recv_bytes.get()));
+    }
+  }
+
+  SECTION("non-blocking streams") {
+    auto mtx = std::mutex{};
+
+    SECTION("writing and reading JSON") {
+      auto sent_json = json::parse(R"({"bool_field": true, "int_field": 12345, "string_field": "ahoy there!"})");
+      auto recv_json = json{};
+
+      auto data_ready  = std::condition_variable{};
+      auto lock        = std::unique_lock {mtx};
+      auto handle_json = [&](auto&& is, size_t n) {
+        auto str = std::string(n, '\0');
+        is.read(str.data(), n);
+        recv_json = json::parse(str);
+        { auto _ = std::unique_lock{mtx}; }
+        data_ready.notify_all();
+      };
+
+      auto udp_in  = udp::istream{io, test_port};
+      udp_in >> handle_json;
+
+      auto _ = test::io_runner{io};
+
+      auto udp_out = udp::ostream{"localhost", test_port};
+      udp_out << sent_json << std::endl;
+
+      data_ready.wait(lock);
+
+      REQUIRE(sent_json == recv_json);
     }
   }
 }
