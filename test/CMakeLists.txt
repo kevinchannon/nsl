@@ -41,6 +41,7 @@ target_link_libraries(nslTest
     CONAN_PKG::catch2
     CONAN_PKG::boost
     CONAN_PKG::nlohmann_json
+    CONAN_PKG::fmt
     nsl::nsl
 )
 

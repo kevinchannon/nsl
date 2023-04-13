@@ -10,8 +10,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-
 #include <boost/asio.hpp>
+#include <fmt/format.h>
 
 #include <atomic>
 #include <chrono>
@@ -48,7 +48,7 @@ TEST_CASE("UDP ostream tests") {
                                   size_t{0x200000},
                                   size_t{0x800000});
 
-  SECTION(std::format("sends and receives {} bytes of data", data_size)) {
+  SECTION(fmt::format("sends and receives {} bytes of data", data_size)) {
     auto data = std::string(data_size, '\0');
     std::generate_n(data.begin(), data.size(), [&rng]() {
       return static_cast<char>(std::uniform_int_distribution<std::int32_t>{0x30, 0x39}(rng));

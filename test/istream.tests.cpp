@@ -9,15 +9,13 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-
 #include <nlohmann/json.hpp>
-
 #include <boost/asio.hpp>
+#include <fmt/format.h>
 
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
-#include <format>
 #include <future>
 #include <iomanip>
 #include <iostream>
@@ -136,7 +134,7 @@ TEST_CASE("UDP istream tests") {
       auto [udp_out, recv_endpoint] = get_connected_socket(io, test_port);
 
       for (auto i = 0u; i < 10; ++i) {
-        auto send_data = std::format("hello, Async UDP Recv! {}\n", i);
+        auto send_data = fmt::format("hello, Async UDP Recv! {}\n", i);
 
         std::unique_lock lock{mtx};
         udp_out.send_to(boost::asio::buffer(send_data), recv_endpoint);
