@@ -29,7 +29,7 @@ jobs:
           toolset: msvc
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build/msvc/x64/debug -DCMAKE_BUILD_TYPE=Debug -DNO_CONAN
+        run: cmake -B ${{github.workspace}}/build/msvc/x64/debug -DCMAKE_BUILD_TYPE=Debug -DNO_CONAN=YES
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build/msvc/x64/debug --config Debug
