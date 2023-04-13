@@ -23,13 +23,17 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ilammy/msvc-dev-cmd@v1
-      - uses: MarkusJx/install-boost@v2.4.4
+      - uses: turtlebrowser/get-conan@v1.2
         with:
-          boost_version: 1.81.0
-          toolset: msvc
+          version: 1.59.0
+      
+      - name: Resolve dependencies
+        run: |
+          conan profile new default --detect
+          conan install . -s build_type=${{env.BUILD_TYPE}} --install-folder=${{github.workspace}}/build/msvc/x64/debug --build=missing
 
       - name: Configure
-        run: cmake -B ${{github.workspace}}/build/msvc/x64/debug -DCMAKE_BUILD_TYPE=Debug -DNO_CONAN=YES
+        run: cmake -B ${{github.workspace}}/build/msvc/x64/debug -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build/msvc/x64/debug --config Debug

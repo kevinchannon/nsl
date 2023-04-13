@@ -22,7 +22,7 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
 # Find Boost libraries
-find_package(Boost 1.81.0)
+find_package(Boost 1.81.0) 
 
 set_property(TARGET nslTest PROPERTY CXX_STANDARD 20)
 
