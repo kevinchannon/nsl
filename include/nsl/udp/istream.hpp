@@ -134,7 +134,7 @@ namespace detail {
 
       _in_kernel->recv_data.consume(n);
 
-      return std::move(callback);
+      return callback;
     }
 
     void _do_cancel_async_read() {
