@@ -23,6 +23,7 @@ class io_context;
 namespace nsl::udp {
 
 namespace detail {
+
   class sink {
     struct kernel {
       kernel(std::string host, port_number port)
@@ -41,7 +42,7 @@ namespace detail {
     using char_type = char;
     using category  = boost::iostreams::sink_tag;
 
-    explicit sink(std::string host, std::uint16_t port) : _kernel{std::make_shared<kernel>(std::move(host), port)} {}
+    explicit sink(std::string host, std::uint16_t port) : _out_kernel{std::make_shared<kernel>(std::move(host), port)} {}
 
     sink()                       = delete;
     sink(const sink&)            = default;
@@ -52,7 +53,7 @@ namespace detail {
     ~sink() {}
 
     [[nodiscard]] std::streamsize write(const char* s, std::streamsize n) {
-      return _kernel->socket.send_to(boost::asio::buffer(s, n), _kernel->endpoint);
+      return _out_kernel->socket.send_to(boost::asio::buffer(s, n), _out_kernel->endpoint);
     }
 
    private:
@@ -66,7 +67,7 @@ namespace detail {
       return *resolver.resolve(query);
     }
 
-    std::shared_ptr<kernel> _kernel;
+    std::shared_ptr<kernel> _out_kernel;
   };
 }  // namespace detail
 

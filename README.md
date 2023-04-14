@@ -90,9 +90,33 @@ This example is a little more complex than the ones above because you need to ma
 ### Send data asynchronously
 TODO: Implement this...
 
+### Bidirectional communication
+```c++
+#include <nsl/udp/stream.hpp>
+```
+If you want to have some kind of two-way communication via UDP, then you can use `nsl::udp::stream` for that. Here's an example thats communicating with some UDP server using this method:
+```c++
+auto data_ready      = std::condition_variable{};
+auto handle_response = [&](auto&& is, size_t n) {
+	auto str = std::string(n, '\0');
+	is.read(str.data(), n);
+	response = json::parse(str);
+	{ auto _ = std::unique_lock{mtx}; }
+	data_ready.notify_all();
+};
+
+auto remote = udp::stream{io, test_port, "localhost", test_port + 1};
+remote >> handle_response;
+
+auto _ = test::io_runner{io};
+
+auto request  = json::parse(R"({"int_field": 12345, "string_field": "ahoy there!"})");
+remote << request << std::endl;
+data_ready.wait(lock);
+```
+
 ## TODO list
 * Async UDP send
 * Work out how to recieve from any remove port, without having to name it in istream constructor
 * TCP streams
 * Packaging
-* CI

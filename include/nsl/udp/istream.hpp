@@ -29,6 +29,7 @@ class io_context;
 namespace nsl::udp {
 
 namespace detail {
+
   class source {
     struct kernel {
       kernel(boost::asio::io_context& io, boost::asio::ip::udp::endpoint endpoint) : io{io}, socket{io, endpoint} {}
@@ -53,7 +54,7 @@ namespace detail {
     using category  = boost::iostreams::source_tag;
 
     explicit source(boost::asio::io_context& io, port_number port)
-        : _kernel{std::make_shared<kernel>(io, _resolve_endpoint(io, "0.0.0.0", port))} {}
+        : _in_kernel{std::make_shared<kernel>(io, _resolve_endpoint(io, "0.0.0.0", port))} {}
 
     source()                         = delete;
     source(const source&)            = default;
@@ -64,31 +65,31 @@ namespace detail {
     ~source() {}
 
     [[nodiscard]] std::streamsize read(char* s, std::streamsize n) {
-      if (_kernel->async_read_in_progress) {
+      if (_in_kernel->async_read_in_progress) {
         return -1;
       }
 
-      _kernel->sync_read_in_progress = true;
-      auto _                         = wite::scope_exit{[this]() { _kernel->sync_read_in_progress = false; }};
+      _in_kernel->sync_read_in_progress = true;
+      auto _                         = wite::scope_exit{[this]() { _in_kernel->sync_read_in_progress = false; }};
 
-      auto bytes_recvd = _kernel->socket.receive(boost::asio::buffer(s, n));
+      auto bytes_recvd = _in_kernel->socket.receive(boost::asio::buffer(s, n));
 
       return bytes_recvd;
     }
 
     template <async_recv_fn_like Callback_T>
     bool async_read([[maybe_unused]] Callback_T&& callback) {
-      if (_kernel->sync_read_in_progress.load()) {
+      if (_in_kernel->sync_read_in_progress.load()) {
         return false;
       }
 
-      _kernel->async_read_in_progress = true;
-      auto recv_buf                   = _kernel->recv_data.prepare(_kernel->recv_buf_size);
+      _in_kernel->async_read_in_progress = true;
+      auto recv_buf                   = _in_kernel->recv_data.prepare(_in_kernel->recv_buf_size);
 
-      _kernel->socket.async_receive(recv_buf, [this, cb = std::forward<Callback_T>(callback)](auto&& err, auto&& n) {
+      _in_kernel->socket.async_receive(recv_buf, [this, cb = std::forward<Callback_T>(callback)](auto&& err, auto&& n) {
         if (err) {
-          { auto lock = std::unique_lock{_kernel->mtx}; }
-          _kernel->exiting_async_read.notify_all();
+          { auto lock = std::unique_lock{_in_kernel->mtx}; }
+          _in_kernel->exiting_async_read.notify_all();
           return;
         }
 
@@ -99,7 +100,7 @@ namespace detail {
     }
 
     void cancel_async_read() {
-      if (not _kernel->async_read_in_progress.load()) {
+      if (not _in_kernel->async_read_in_progress.load()) {
         return;
       }
 
@@ -107,7 +108,7 @@ namespace detail {
     }
 
     void cancel_sync_read() {
-      if (not _kernel->sync_read_in_progress.load()) {
+      if (not _in_kernel->sync_read_in_progress.load()) {
         return;
       }
 
@@ -126,39 +127,39 @@ namespace detail {
 
     template <async_recv_fn_like Callback_T>
     [[nodiscard]] Callback_T _do_receive_and_handle_data(Callback_T callback, size_t n) {
-      _kernel->recv_data.commit(n);
+      _in_kernel->recv_data.commit(n);
 
-      auto data_stream = std::istream{&_kernel->recv_data};
+      auto data_stream = std::istream{&_in_kernel->recv_data};
       callback(data_stream, n);
 
-      _kernel->recv_data.consume(n);
+      _in_kernel->recv_data.consume(n);
 
       return std::move(callback);
     }
 
     void _do_cancel_async_read() {
-      auto lock = std::unique_lock{_kernel->mtx};
-      _kernel->socket.cancel();
-      _kernel->exiting_async_read.wait(lock);
+      auto lock = std::unique_lock{_in_kernel->mtx};
+      _in_kernel->socket.cancel();
+      _in_kernel->exiting_async_read.wait(lock);
 
       // The last point that we have visibility on the process is marked by the condition variable, however
       // there is still stuff to happen after that point, so we wait for a bit.
       // Find a wait to NOT DO THIS.
       std::this_thread::sleep_for(std::chrono::milliseconds{2});
 
-      _kernel->async_read_in_progress = false;
+      _in_kernel->async_read_in_progress = false;
     }
 
     void _do_cancel_sync_read() {
-      auto lock = std::unique_lock{_kernel->mtx};
-      _kernel->socket.cancel();
+      auto lock = std::unique_lock{_in_kernel->mtx};
+      _in_kernel->socket.cancel();
 
       std::this_thread::sleep_for(std::chrono::milliseconds{2});
 
-      _kernel->sync_read_in_progress = false;
+      _in_kernel->sync_read_in_progress = false;
     }
 
-    std::shared_ptr<kernel> _kernel;
+    std::shared_ptr<kernel> _in_kernel;
   };
 }  // namespace detail
 

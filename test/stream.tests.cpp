@@ -13,14 +13,16 @@
 #include <wite/collections/make_vector.hpp>
 
 #include <algorithm>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 #include <random>
 #include <thread>
 #include <vector>
-#include <mutex>
-#include <condition_variable>
 
 using nlohmann::json;
 using namespace nsl;
+using namespace std::chrono_literals;
 
 TEST_CASE("reading and writing to UDP streams") {
   auto io = boost::asio::io_context{};
@@ -73,7 +75,7 @@ TEST_CASE("reading and writing to UDP streams") {
       auto recv_json = json{};
 
       auto data_ready  = std::condition_variable{};
-      auto lock        = std::unique_lock {mtx};
+      auto lock        = std::unique_lock{mtx};
       auto handle_json = [&](auto&& is, size_t n) {
         auto str = std::string(n, '\0');
         is.read(str.data(), n);
@@ -82,7 +84,7 @@ TEST_CASE("reading and writing to UDP streams") {
         data_ready.notify_all();
       };
 
-      auto udp_in  = udp::istream{io, test_port};
+      auto udp_in = udp::istream{io, test_port};
       udp_in >> handle_json;
 
       auto _ = test::io_runner{io};
@@ -100,29 +102,46 @@ TEST_CASE("reading and writing to UDP streams") {
     auto mtx = std::mutex{};
 
     SECTION("writing and reading JSON") {
-      auto sent_json = json::parse(R"({"bool_field": true, "int_field": 12345, "string_field": "ahoy there!"})");
-      auto recv_json = json{};
+      auto request  = json::parse(R"({"bool_field": true, "int_field": 12345, "string_field": "ahoy there!"})");
+      auto response = json{};
 
-      auto data_ready  = std::condition_variable{};
-      auto lock        = std::unique_lock{mtx};
-      auto handle_json = [&](auto&& is, size_t n) {
+      auto lock                 = std::unique_lock{mtx};
+      auto server_listening     = std::condition_variable{};
+      auto running_test_server = test::running_async([&]() {
+        auto server_in = udp::istream{io, test_port + 1};
+
+        { auto _ = std::unique_lock{mtx}; }
+        server_listening.notify_all();
+
+        auto req = json{};
+        server_in >> req;
+
+        auto server_out = udp::ostream{"localhost", test_port};
+        server_out << (req == request ? json{{"result", 200}} : json{{"result", 400}}) << udp::flush;
+      });
+
+      server_listening.wait(lock);
+
+      auto data_ready      = std::condition_variable{};
+      auto handle_response = [&](auto&& is, size_t n) {
         auto str = std::string(n, '\0');
         is.read(str.data(), n);
-        recv_json = json::parse(str);
+        response = json::parse(str);
         { auto _ = std::unique_lock{mtx}; }
         data_ready.notify_all();
       };
 
-      auto udp = udp::stream{io, test_port, "localhost", test_port};
-      udp >> handle_json;
+      auto remote = udp::stream{io, test_port, "localhost", test_port + 1};
+
+      remote >> handle_response;
 
       auto _ = test::io_runner{io};
 
-      udp << sent_json << std::endl;
+      remote << request << std::endl;
 
       data_ready.wait(lock);
 
-      REQUIRE(sent_json == recv_json);
+      REQUIRE(json{{"result", 200}} == response);
     }
   }
 }
