@@ -31,7 +31,11 @@ namespace detail {
         endpoint = sink::_resolve_endpoint(io, std::move(host), port);
       }
 
-      ~kernel() { socket.close(); }
+      ~kernel() {
+        if (socket.is_open()) {
+          socket.close();
+        }
+      }
 
       boost::asio::io_context io;
       boost::asio::ip::udp::socket socket;

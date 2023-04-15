@@ -35,7 +35,9 @@ namespace detail {
       kernel(boost::asio::io_context& io, boost::asio::ip::udp::endpoint endpoint) : io{io}, socket{io, endpoint} {}
 
       ~kernel() {
-        socket.close();
+        if (socket.is_open()) {
+          socket.close();
+        }
       }
 
       boost::asio::io_context& io;
