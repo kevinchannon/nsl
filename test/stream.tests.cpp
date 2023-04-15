@@ -52,7 +52,7 @@ TEST_CASE("reading and writing to UDP streams") {
 
       auto rng = std::mt19937{345234};  // arbitrary seed.
       std::generate_n(std::back_inserter(sent_bytes), 1024, [&]() {
-        return static_cast<std::byte>(std::uniform_int<>{0x00, 0xFF}(rng));
+        return static_cast<std::byte>(std::uniform_int_distribution<>{0x00, 0xFF}(rng));
       });
 
       auto recv_bytes = test::running_async([&]() {
