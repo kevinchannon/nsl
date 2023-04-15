@@ -79,7 +79,7 @@ namespace detail {
     }
 
     template <async_recv_fn_like Callback_T>
-    bool async_read([[maybe_unused]] Callback_T&& callback) {
+    bool async_read(Callback_T&& callback) {
       if (_in_kernel->sync_read_in_progress.load()) {
         return false;
       }

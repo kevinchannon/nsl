@@ -31,7 +31,7 @@ TEST_CASE("reading and writing to UDP streams") {
 
   SECTION("blocking streams") {
     auto udp_in  = udp::istream{io, test_port};
-    auto udp_out = udp::ostream{"localhost", test_port};
+    auto udp_out = udp::ostream{io, "localhost", test_port};
 
     SECTION("writing and reading JSON") {
       auto sent_json = json::parse(R"({"bool_field": true, "int_field": 12345, "string_field": "ahoy there!"})");
@@ -89,7 +89,7 @@ TEST_CASE("reading and writing to UDP streams") {
 
       auto _ = test::io_runner{io};
 
-      auto udp_out = udp::ostream{"localhost", test_port};
+      auto udp_out = udp::ostream{io, "localhost", test_port};
       udp_out << sent_json << std::endl;
 
       data_ready.wait(lock);
@@ -116,7 +116,7 @@ TEST_CASE("reading and writing to UDP streams") {
         auto req = json{};
         server_in >> req;
 
-        auto server_out = udp::ostream{"localhost", test_port};
+        auto server_out = udp::ostream{io, "localhost", test_port};
         server_out << (req == request ? json{{"result", 200}} : json{{"result", 400}}) << udp::flush;
       });
 

@@ -26,8 +26,8 @@ namespace detail {
 
   class sink {
     struct kernel {
-      kernel(std::string host, port_number port)
-          : io{}, socket{io, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0)}, endpoint{} {
+      kernel(boost::asio::io_context& io, std::string host, port_number port)
+          : io{io}, socket{io, boost::asio::ip::udp::endpoint(boost::asio::ip::udp::v4(), 0)}, endpoint{} {
         endpoint = sink::_resolve_endpoint(io, std::move(host), port);
       }
 
@@ -37,7 +37,7 @@ namespace detail {
         }
       }
 
-      boost::asio::io_context io;
+      boost::asio::io_context& io;
       boost::asio::ip::udp::socket socket;
       boost::asio::ip::udp::endpoint endpoint;
     };
@@ -46,7 +46,8 @@ namespace detail {
     using char_type = char;
     using category  = boost::iostreams::sink_tag;
 
-    explicit sink(std::string host, std::uint16_t port) : _out_kernel{std::make_shared<kernel>(std::move(host), port)} {}
+    explicit sink(boost::asio::io_context& io, std::string host, std::uint16_t port)
+        : _out_kernel{std::make_shared<kernel>(io, std::move(host), port)} {}
 
     sink()                       = delete;
     sink(const sink&)            = default;
@@ -58,6 +59,23 @@ namespace detail {
 
     [[nodiscard]] std::streamsize write(const char* s, std::streamsize n) {
       return _out_kernel->socket.send_to(boost::asio::buffer(s, n), _out_kernel->endpoint);
+    }
+
+    template <typename Data_T, async_send_fn_like Callback_T>
+    void async_write([[maybe_unused]] std::pair<Data_T, Callback_T>&& data_and_callback) {
+
+      // _out_kernel->socket.set_option(boost::asio::socket_base::send_buffer_size{static_cast<int>(data_and_callback.first.size())});
+
+      auto data_to_send = std::make_shared<Data_T>(std::move(data_and_callback.first));
+      auto send_buf     = boost::asio::buffer(*data_to_send);
+      _out_kernel->socket.async_send_to(
+          send_buf,
+          _out_kernel->endpoint,
+          [data = std::move(data_to_send), callback = std::move(data_and_callback.second)](auto&& ec, size_t n) {
+            if (not ec) {
+              callback(n);
+            }
+          });
     }
 
    private:
@@ -78,7 +96,8 @@ namespace detail {
 using ostreambuf = boost::iostreams::stream_buffer<detail::sink>;
 class ostream : public boost::iostreams::stream<detail::sink> {
  public:
-  explicit ostream(std::string host, std::uint16_t port) : boost::iostreams::stream<detail::sink>{std::move(host), port} {}
+  explicit ostream(boost::asio::io_context& io, std::string host, std::uint16_t port)
+      : boost::iostreams::stream<detail::sink>{io, std::move(host), port} {}
 };
 
 struct flush_t {};
@@ -96,6 +115,12 @@ ostream& operator<<(ostream& os, Range_T&& bytes) {
     os.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
   }
 
+  return os;
+}
+
+template <typename Data_T, async_send_fn_like Callback_T>
+ostream& operator<<(ostream& os, std::pair<Data_T, Callback_T>&& data_and_callback) {
+  os->async_write(std::forward<std::pair<Data_T, Callback_T>>(data_and_callback));
   return os;
 }
 

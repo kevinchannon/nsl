@@ -32,4 +32,7 @@ namespace detail {
 template <typename T>
 concept async_recv_fn_like = requires(T& t) { t(detail::make_lval<std::istream>(), size_t{0}); };
 
+template <typename T>
+concept async_send_fn_like = requires(T& t) { t(size_t{0}); };
+
 }  // namespace nsl::udp
