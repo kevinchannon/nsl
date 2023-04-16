@@ -5,11 +5,49 @@
 
 The Network Streams Library (NSL) is a C++ library that combines boost ASIO sockets with Boost IOStreams to give a natural experience for the user trying to send and receive network data in a C++ application.
 
+NOTE: This work is not complete.
+* The implementation of asynchronous sending needs to be finished (the tests fail).
+* The tests on Ubuntu|GCC|Debug hang.
+* The tests on Ubuntu|GCC|Release don't run because the exe isn't found, for some reason
+* There's no way to receive incomming UDP without specifying the port that it's coming in on.
+
+If you're reading this an want to fix these things, then be my guest! Alternatively, if you're reading this and you want to use this library for something but can't because of these issues, then let me know and I'll see what I can do.
+
 ## Installation
 NSL is header only at the moment, so just copy the files into your repo and off you go!  In time I will add some kind of packaging so that it works with CMake FetchContent, Nuget, Conan, VCPKG, etc. but for now just copy and paste :)
 
 ## Prerequisites
 This thing requires Boost ASIO and Boost IOStreams (and their dependencies). It also uses C++20 features, so you'll need a compiler that supports that version of the standard.
+
+If you want to build and run the tests, then you will also need the following:
+* Catch2
+* Nlohmann JSON
+* Fmt
+
+## Building
+
+To install all the dependencies, build and run the tests, then do:
+```bash
+# Install dependencies
+cd <repo root>
+conan install . --build=missing -s build_type=Debug --install-folder=out/build/x64
+
+# Build the tests
+cmake -B .\out\build\x64
+cmake --build .\out\build\x64
+
+# Run the tests
+.\out\build\x64\Debug\nslTest.exe
+```
+
+If you don't have Conan, then you'll need to do the following before the conan install commands above:
+```bash
+pip install "conan=1.59.0"
+cd <repo root.>
+conan profile new default --detect
+```
+
+This uses Pip, so if you don't have that, then you'll need to install a Python3 distribution to get Pip.
 
 ## Examples
 Here are some simple things you can do:
