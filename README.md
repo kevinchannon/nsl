@@ -24,12 +24,15 @@ If you want to build and run the tests, then you will also need the following:
 * Nlohmann JSON
 * Fmt
 
-## Building
+## Getting and Building
 
-To install all the dependencies, build and run the tests, then do:
+To get the code, install all the dependencies, build and run the tests, then do:
 ```bash
+# Get the code
+git clone git@github.com:kevinchannon/nsl.git
+cd nsl
+
 # Install dependencies
-cd <repo root>
 conan install . --build=missing -s build_type=Debug --install-folder=out/build/x64
 
 # Build the tests
